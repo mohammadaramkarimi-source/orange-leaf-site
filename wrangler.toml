@@ -1,0 +1,11 @@
+name = "orange-leaf-7d0b"
+main = "Worker.js"
+compatibility_date = "2024-09-23"
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+
+[[kv_namespaces]]
+binding = "SITE_KV"
+id = "ba2efd40ed984db2bbd68402c9d03225"
