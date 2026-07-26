@@ -8,4 +8,4 @@ binding = "ASSETS"
 
 [[kv_namespaces]]
 binding = "SITE_KV"
-id = "ba2efd40ed984db2bbd68402c9d03225 "      
+id = "ba2efd40ed984db2bbd68402c9d03225"      
