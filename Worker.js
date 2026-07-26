@@ -1,9 +1,3 @@
-// این Worker دو کار انجام می‌دهد:
-// ۱) سرو کردن فایل‌های استاتیک سایت (پوشه public، شامل index.html)
-// ۲) ارائه‌ی یک API ساده (/api/kv/...) که روی Cloudflare KV ذخیره می‌کند
-//    تا اطلاعات سایت (کاربرها، پروژه‌ها، قراردادها و ...) بین همه‌ی
-//    گوشی‌ها و مرورگرها مشترک باشد و دیگر به localStorage وابسته نباشد.
-
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -18,7 +12,6 @@ export default {
       if (request.method === "GET") {
         const value = await env.SITE_KV.get(key);
         if (value === null) {
-          // معادل نبود مقدار در localStorage
           return new Response(null, { status: 404 });
         }
         return new Response(value, {
@@ -41,7 +34,13 @@ export default {
       return new Response("متد پشتیبانی نمی‌شود", { status: 405 });
     }
 
-    // هر درخواست دیگری: سرو فایل استاتیک متناظر (index.html و غیره)
+    // اگر آدرس ریشه یا مسیر ناشناخته بود، فایل Index.html را برگردان
+    if (url.pathname === "/" || url.pathname === "/index.html") {
+      const fixedUrl = new URL(request.url);
+      fixedUrl.pathname = "/Index.html";
+      return env.ASSETS.fetch(new Request(fixedUrl, request));
+    }
+
     return env.ASSETS.fetch(request);
   },
 };
