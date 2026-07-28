@@ -634,6 +634,27 @@ const remoteStorage = {
   }
 };
 
+// ============================================
+// ذخیره‌ی جدای عکس/ویدیو از محتوای اصلی، تا ویرایش متن‌ها سنگین نشود
+// ============================================
+function storeMediaAndGetRef(dataUrl) {
+  if (!dataUrl) return dataUrl;
+  let ref = "media_" + Date.now() + "_" + Math.random().toString(36).slice(2, 10);
+  remoteStorage.setItem(ref, dataUrl);
+  return ref;
+}
+
+function resolveMediaRef(ref) {
+  if (!ref) return ref;
+  // سازگاری با داده‌های قدیمی که مستقیم به‌صورت data: ذخیره شده بودند
+  if (ref.indexOf("data:") === 0) return ref;
+  if (ref.indexOf("media_") === 0) {
+    let value = remoteStorage.getItem(ref);
+    return value || "";
+  }
+  return ref;
+}
+
 function getAdminCreds() {
   let data = remoteStorage.getItem("adminCreds");
   if (data) return JSON.parse(data);
@@ -2459,7 +2480,7 @@ function renderSiteContent() {
 
   let homeEl = document.getElementById("home");
   if (content.homeImage) {
-    homeEl.style.backgroundImage = 'linear-gradient(rgba(0,50,100,.7),rgba(0,50,100,.7)), url("' + content.homeImage + '")';
+    homeEl.style.backgroundImage = 'linear-gradient(rgba(0,50,100,.7),rgba(0,50,100,.7)), url("' + resolveMediaRef(content.homeImage) + '")';
   } else {
     homeEl.style.backgroundImage = "";
   }
@@ -2478,7 +2499,7 @@ function renderSiteContent() {
 
   let logoEl = document.getElementById("siteLogoImg");
   if (content.logoImage) {
-    logoEl.src = content.logoImage;
+    logoEl.src = resolveMediaRef(content.logoImage);
     logoEl.style.display = "inline-block";
   } else {
     logoEl.style.display = "none";
@@ -2560,9 +2581,9 @@ function renderCustomSections() {
   container.innerHTML = sections.map(function (s) {
     let mediaHtml = "";
     if (s.type === "image" || s.type === "gif") {
-      mediaHtml = '<img class="custom-media" src="' + s.content + '" alt="">';
+      mediaHtml = '<img class="custom-media" src="' + resolveMediaRef(s.content) + '" alt="">';
     } else if (s.type === "video") {
-      mediaHtml = '<video class="custom-media" src="' + s.content + '" controls></video>';
+      mediaHtml = '<video class="custom-media" src="' + resolveMediaRef(s.content) + '" controls></video>';
     } else {
       mediaHtml = '<p class="custom-text">' + (s.content || "").replace(/</g, "&lt;") + '</p>';
     }
@@ -2584,7 +2605,7 @@ function renderSupportPage() {
 
   let img = document.getElementById("supportImageDisplay");
   if (content.supportImage) {
-    img.src = content.supportImage;
+    img.src = resolveMediaRef(content.supportImage);
     img.style.display = "block";
   } else {
     img.style.display = "none";
@@ -2658,7 +2679,7 @@ function renderTeam() {
   let members = getTeamMembers();
   let box = document.getElementById("teamContainer");
   box.innerHTML = members.map(function (m, i) {
-    return '<div onclick="openTeamMemberPage(' + i + ')"><img src="' + m.img + '" width="120"><h3>' + m.name + '</h3><p>' + m.role + '</p></div>';
+    return '<div onclick="openTeamMemberPage(' + i + ')"><img src="' + resolveMediaRef(m.img) + '" width="120"><h3>' + m.name + '</h3><p>' + m.role + '</p></div>';
   }).join("");
 }
 
@@ -2673,7 +2694,7 @@ function openTeamMemberPage(index) {
   document.getElementById("teamMemberPageText").textContent = m.extraText || "";
 
   let img = document.getElementById("teamMemberPageImage");
-  let imgSrc = m.extraImage || m.img;
+  let imgSrc = resolveMediaRef(m.extraImage || m.img);
   if (imgSrc) {
     img.src = imgSrc;
     img.style.display = "block";
@@ -2696,7 +2717,7 @@ function showSiteContentAdmin() {
 
   let preview = document.getElementById("homeImagePreview");
   if (content.homeImage) {
-    preview.src = content.homeImage;
+    preview.src = resolveMediaRef(content.homeImage);
     preview.style.display = "block";
   } else {
     preview.style.display = "none";
@@ -2705,7 +2726,7 @@ function showSiteContentAdmin() {
   let logoPreview = document.getElementById("logoImagePreview");
   if (logoPreview) {
     if (content.logoImage) {
-      logoPreview.src = content.logoImage;
+      logoPreview.src = resolveMediaRef(content.logoImage);
       logoPreview.style.display = "block";
     } else {
       logoPreview.style.display = "none";
@@ -2734,7 +2755,7 @@ function showSiteContentAdmin() {
   document.getElementById("editSupportText2").value = content.supportText2;
   let supportPreview = document.getElementById("supportImagePreview");
   if (content.supportImage) {
-    supportPreview.src = content.supportImage;
+    supportPreview.src = resolveMediaRef(content.supportImage);
     supportPreview.style.display = "block";
   } else {
     supportPreview.style.display = "none";
@@ -2757,7 +2778,7 @@ function showSiteContentAdmin() {
       (i > 0 ? '<button onclick="moveTeamMember(' + i + ',-1)" style="padding:4px 12px;margin-left:4px;">▲ بالا</button>' : '') +
       (i < members.length - 1 ? '<button onclick="moveTeamMember(' + i + ',1)" style="padding:4px 12px;">▼ پایین</button>' : '') +
       '</div>' +
-      '<img src="' + m.img + '" width="70" style="border-radius:50%;display:block;margin:0 auto 8px;">' +
+      '<img src="' + resolveMediaRef(m.img) + '" width="70" style="border-radius:50%;display:block;margin:0 auto 8px;">' +
       '<input id="teamName_' + i + '" value="' + m.name.replace(/"/g, "&quot;") + '" placeholder="نام">' +
       '<input id="teamRole_' + i + '" value="' + m.role.replace(/"/g, "&quot;") + '" placeholder="سمت">' +
       '<label style="display:block;text-align:right;font-size:13px;margin:8px 0 4px;">تغییر عکس اصلی</label>' +
@@ -2786,7 +2807,7 @@ async function saveLogoImage() {
 
   if (hasNewImage) {
     try {
-      content.logoImage = await fileToBase64(imageInput.files[0]);
+      content.logoImage = storeMediaAndGetRef(await fileToBase64(imageInput.files[0]));
     } catch (e) {
       showSiteMessage("خطا در بارگذاری لوگو - دوباره تلاش کنید", true);
       return;
@@ -2840,7 +2861,7 @@ async function saveSupportContent() {
   let imageInput = document.getElementById("editSupportImage");
   if (imageInput && imageInput.files.length > 0) {
     try {
-      content.supportImage = await fileToBase64(imageInput.files[0]);
+      content.supportImage = storeMediaAndGetRef(await fileToBase64(imageInput.files[0]));
     } catch (e) {
       showSiteMessage("خطا در بارگذاری تصویر - دوباره تلاش کنید", true);
       return;
@@ -2882,7 +2903,7 @@ async function saveHomeContent() {
   let imageInput = document.getElementById("editHomeImage");
   if (imageInput && imageInput.files.length > 0) {
     try {
-      content.homeImage = await fileToBase64(imageInput.files[0]);
+      content.homeImage = storeMediaAndGetRef(await fileToBase64(imageInput.files[0]));
     } catch (e) {
       showSiteMessage("خطا در بارگذاری تصویر - دوباره تلاش کنید", true);
       return;
@@ -2982,7 +3003,7 @@ async function updateTeamMember(index) {
 
   if (photoInput && photoInput.files.length > 0) {
     try {
-      members[index].img = await fileToBase64(photoInput.files[0]);
+      members[index].img = storeMediaAndGetRef(await fileToBase64(photoInput.files[0]));
     } catch (e) {
       showSiteMessage("خطا در بارگذاری عکس - دوباره تلاش کنید", true);
       return;
@@ -2991,7 +3012,7 @@ async function updateTeamMember(index) {
 
   if (extraImageInput && extraImageInput.files.length > 0) {
     try {
-      members[index].extraImage = await fileToBase64(extraImageInput.files[0]);
+      members[index].extraImage = storeMediaAndGetRef(await fileToBase64(extraImageInput.files[0]));
     } catch (e) {
       showSiteMessage("خطا در بارگذاری عکس صفحه اختصاصی - دوباره تلاش کنید", true);
       return;
@@ -3051,7 +3072,7 @@ async function addTeamMember() {
   let imgSrc = "";
   if (fileInput.files.length > 0) {
     try {
-      imgSrc = await fileToBase64(fileInput.files[0]);
+      imgSrc = storeMediaAndGetRef(await fileToBase64(fileInput.files[0]));
     } catch (e) {
       showSiteMessage("خطا در بارگذاری تصویر - دوباره تلاش کنید", true);
       return;
@@ -3095,9 +3116,9 @@ function renderCustomSectionsAdmin() {
   box.innerHTML = sections.map(function (s, i) {
     let mediaPreview = "";
     if (s.type === "image" || s.type === "gif") {
-      mediaPreview = '<img src="' + s.content + '" style="max-width:100%;max-height:150px;border-radius:8px;display:block;margin-bottom:8px;">';
+      mediaPreview = '<img src="' + resolveMediaRef(s.content) + '" style="max-width:100%;max-height:150px;border-radius:8px;display:block;margin-bottom:8px;">';
     } else if (s.type === "video") {
-      mediaPreview = '<video src="' + s.content + '" style="max-width:100%;max-height:150px;border-radius:8px;display:block;margin-bottom:8px;" controls></video>';
+      mediaPreview = '<video src="' + resolveMediaRef(s.content) + '" style="max-width:100%;max-height:150px;border-radius:8px;display:block;margin-bottom:8px;" controls></video>';
     }
     return '<div class="custom-section-admin-box">' +
       '<label style="display:block;text-align:right;font-size:13px;margin:4px 0;">نوع بخش: ' + (typeLabels[s.type] || s.type) + '</label>' +
@@ -3134,7 +3155,7 @@ async function addCustomSection() {
       return;
     }
     try {
-      sectionContent = await fileToBase64(fileInput.files[0]);
+      sectionContent = storeMediaAndGetRef(await fileToBase64(fileInput.files[0]));
     } catch (e) {
       showCustomSectionMessage("خطا در بارگذاری فایل - دوباره تلاش کنید", true);
       return;
@@ -3178,7 +3199,7 @@ async function updateCustomSection(index) {
     let fileInput = document.getElementById("customSectionFile_" + index);
     if (fileInput && fileInput.files.length > 0) {
       try {
-        section.content = await fileToBase64(fileInput.files[0]);
+        section.content = storeMediaAndGetRef(await fileToBase64(fileInput.files[0]));
       } catch (e) {
         showCustomSectionMessage("خطا در بارگذاری فایل - دوباره تلاش کنید", true);
         return;
