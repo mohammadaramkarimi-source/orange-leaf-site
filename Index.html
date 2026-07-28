@@ -49,6 +49,13 @@ section h2{text-align:center;color:#063970;margin-bottom:35px;}
 #team div:hover{transform:translateY(-3px);}
 #team img{width:120px;height:120px;border-radius:50%;background:#ddd;object-fit:cover;}
 .site-logo-img{height:42px;width:auto;border-radius:6px;}
+.custom-section{padding:60px 7%;background:#fff;}
+.custom-section:nth-child(even){background:#eaf3ff;}
+.custom-section h2{text-align:center;color:#063970;margin-bottom:25px;}
+.custom-section .custom-text{max-width:800px;margin:0 auto;font-size:17px;text-align:center;white-space:pre-wrap;}
+.custom-section img.custom-media, .custom-section video.custom-media{display:block;max-width:100%;max-height:480px;margin:0 auto;border-radius:12px;object-fit:cover;}
+.custom-section-admin-box{border:1px solid #ddd;border-radius:8px;padding:12px;margin:10px 0;text-align:right;background:#fafafa;}
+.custom-section-admin-box select{width:100%;padding:10px;margin:6px 0;border:1px solid #ccc;border-radius:8px;font-family:inherit;}
 .checkbox-row{display:flex;align-items:center;gap:8px;background:white;padding:10px 12px;border-radius:8px;margin:8px 0;text-align:right;}
 .checkbox-row input[type="checkbox"]{width:auto;margin:0;}
 
@@ -124,7 +131,7 @@ footer{background:#111;color:white;padding:25px;text-align:center;}
 <header>
   <div style="display:flex;align-items:center;gap:10px;">
     <img id="siteLogoImg" class="site-logo-img" src="" alt="لوگو" style="display:none;">
-    <h2>☀️ سامانه خدمات نیروگاه خورشیدی</h2>
+    <h2 id="headerTitleText">☀️ سامانه خدمات نیروگاه خورشیدی</h2>
   </div>
   <button class="admin-hamburger" onclick="openMainMenu()">☰</button>
 </header>
@@ -177,6 +184,8 @@ footer{background:#111;color:white;padding:25px;text-align:center;}
   <h2 id="aboutHeading">درباره ما</h2>
   <p id="aboutText">ما یک تیم تخصصی در حوزه انرژی خورشیدی هستیم و خدمات مهندسی و مشاوره نیروگاه ارائه می‌دهیم.</p>
 </section>
+
+<div id="customSectionsContainer"></div>
 
 </div><!-- پایان mainSite -->
 
@@ -329,6 +338,7 @@ footer{background:#111;color:white;padding:25px;text-align:center;}
   <div class="admin-sidebar" id="adminSidebar">
     <button class="close-admin-menu" onclick="closeAdminMenu()">✕</button>
     <a id="adminNav-content" onclick="showAdminSection('content')">محتوای صفحه اصلی</a>
+    <a id="adminNav-customsections" onclick="showAdminSection('customsections')">بخش‌های سفارشی</a>
     <a id="adminNav-services" onclick="showAdminSection('services')">خدمات و قیمت‌ها</a>
     <a id="adminNav-users" onclick="showAdminSection('users')">کاربران ثبت نام شده</a>
     <a id="adminNav-projects" onclick="showAdminSection('projects')">پروژه‌های ثبت شده</a>
@@ -350,11 +360,19 @@ footer{background:#111;color:white;padding:25px;text-align:center;}
 
     <h4>لوگوی سایت</h4>
     <img id="logoImagePreview" src="" style="display:none;max-height:80px;margin-bottom:8px;">
-    <input type="file" id="editLogoImage" accept="image/*">
+    <input type="file" id="editLogoImage" accept="image/*,image/gif">
+    <label style="display:block;text-align:right;font-size:13px;margin:10px 0 4px;">اندازه لوگو (ارتفاع به پیکسل)</label>
+    <input id="editLogoSize" type="number" min="16" max="200" placeholder="مثال: 42">
     <div class="row-buttons" style="justify-content:flex-start;">
       <button onclick="saveLogoImage()">ذخیره لوگو</button>
       <button onclick="resetLogoImage()" style="background:#555;">حذف لوگو</button>
     </div>
+
+    <h4 style="margin-top:20px;">متن و اندازه هدر سایت</h4>
+    <input id="editHeaderText" placeholder="متن هدر (کنار لوگو)">
+    <label style="display:block;text-align:right;font-size:13px;margin:10px 0 4px;">اندازه متن هدر (به پیکسل)</label>
+    <input id="editHeaderTextSize" type="number" min="10" max="60" placeholder="مثال: 22">
+    <button onclick="saveHeaderContent()">ذخیره هدر</button>
 
     <h4>بخش معرفی (Home)</h4>
     <input id="editHomeTitle" placeholder="عنوان اصلی">
@@ -419,6 +437,27 @@ footer{background:#111;color:white;padding:25px;text-align:center;}
     <p id="siteContentMessage"></p>
   </div>
   </div><!-- پایان adminSection-content -->
+
+  <div class="admin-section" id="adminSection-customsections">
+  <div class="user-box" style="max-width:600px;">
+    <h3>مدیریت بخش‌های سفارشی صفحه اصلی</h3>
+    <p class="hint">در این بخش می‌توانید بخش‌های جدید به صفحه اصلی سایت اضافه کنید و در هرکدام متن، عکس، گیف یا ویدیو قرار دهید.</p>
+    <div id="customSectionsAdminList"></div>
+
+    <h4 style="margin-top:20px;">افزودن بخش جدید</h4>
+    <input id="newCustomSectionTitle" placeholder="عنوان بخش">
+    <select id="newCustomSectionType">
+      <option value="text">متن</option>
+      <option value="image">عکس</option>
+      <option value="gif">گیف</option>
+      <option value="video">ویدیو</option>
+    </select>
+    <textarea id="newCustomSectionText" placeholder="متن بخش (در صورت انتخاب نوع متن)" rows="3"></textarea>
+    <input type="file" id="newCustomSectionFile" accept="image/*,video/*">
+    <button onclick="addCustomSection()">افزودن بخش</button>
+    <p id="customSectionMessage"></p>
+  </div>
+  </div><!-- پایان adminSection-customsections -->
 
   <div class="admin-section" id="adminSection-services">
   <div class="user-box" style="max-width:600px;">
@@ -698,7 +737,7 @@ function closeMainMenu() {
 // ============================================
 // منوی همبرگری پنل مدیریت
 // ============================================
-let adminSections = ["content", "services", "users", "projects", "discounts", "contracts", "chat", "settings"];
+let adminSections = ["content", "customsections", "services", "users", "projects", "discounts", "contracts", "chat", "settings"];
 let currentAdminSection = "content";
 
 function openAdminMenu() {
@@ -2326,6 +2365,10 @@ function saveAdminCredentials() {
 // ویرایش محتوای سایت توسط مدیر (Home / Services / About / Team / Footer)
 // ============================================
 let defaultSiteContent = {
+  headerText: "☀️ سامانه خدمات نیروگاه خورشیدی",
+  headerTextSize: 22,
+  logoSize: 42,
+  customSections: [],
   homeTitle: "مشاوره و طراحی نیروگاه خورشیدی",
   homeSubtitle: "ارائه خدمات طراحی فنی، طرح توجیهی و مطالعات اتصال به شبکه",
   servicesHeading: "خدمات ما",
@@ -2426,6 +2469,38 @@ function renderSiteContent() {
   } else {
     logoEl.style.display = "none";
   }
+  logoEl.style.height = (content.logoSize || 42) + "px";
+
+  let headerTitleEl = document.getElementById("headerTitleText");
+  headerTitleEl.textContent = content.headerText;
+  headerTitleEl.style.fontSize = (content.headerTextSize || 22) + "px";
+
+  renderCustomSections();
+}
+
+// ============================================
+// بخش‌های سفارشی صفحه اصلی (متن/عکس/گیف/ویدیو)
+// ============================================
+function renderCustomSections() {
+  let content = getSiteContent();
+  let sections = content.customSections || [];
+  let container = document.getElementById("customSectionsContainer");
+  if (!container) return;
+
+  container.innerHTML = sections.map(function (s) {
+    let mediaHtml = "";
+    if (s.type === "image" || s.type === "gif") {
+      mediaHtml = '<img class="custom-media" src="' + s.content + '" alt="">';
+    } else if (s.type === "video") {
+      mediaHtml = '<video class="custom-media" src="' + s.content + '" controls></video>';
+    } else {
+      mediaHtml = '<p class="custom-text">' + (s.content || "").replace(/</g, "&lt;") + '</p>';
+    }
+    return '<section class="custom-section">' +
+      (s.title ? '<h2>' + s.title.replace(/</g, "&lt;") + '</h2>' : '') +
+      mediaHtml +
+      '</section>';
+  }).join("");
 }
 
 // ============================================
@@ -2566,6 +2641,10 @@ function showSiteContentAdmin() {
       logoPreview.style.display = "none";
     }
   }
+  document.getElementById("editLogoSize").value = content.logoSize || 42;
+  document.getElementById("editHeaderText").value = content.headerText;
+  document.getElementById("editHeaderTextSize").value = content.headerTextSize || 22;
+  renderCustomSectionsAdmin();
 
   document.getElementById("editServicesHeading").value = content.servicesHeading;
   document.getElementById("editSvcTitle0").value = content.svcTitle0;
@@ -2627,18 +2706,23 @@ function showSiteMessage(text, isError) {
 async function saveLogoImage() {
   let content = getSiteContent();
   let imageInput = document.getElementById("editLogoImage");
+  let sizeInput = document.getElementById("editLogoSize");
+  let hasNewImage = imageInput && imageInput.files.length > 0;
 
-  if (imageInput && imageInput.files.length > 0) {
+  if (hasNewImage) {
     try {
       content.logoImage = await fileToBase64(imageInput.files[0]);
     } catch (e) {
       showSiteMessage("خطا در بارگذاری لوگو - دوباره تلاش کنید", true);
       return;
     }
-  } else {
+  } else if (!content.logoImage) {
     showSiteMessage("لطفاً یک فایل تصویر برای لوگو انتخاب کنید", true);
     return;
   }
+
+  let sizeVal = parseInt(sizeInput.value, 10);
+  content.logoSize = (sizeVal && sizeVal > 0) ? sizeVal : 42;
 
   try {
     saveSiteContent(content);
@@ -2650,6 +2734,17 @@ async function saveLogoImage() {
   renderSiteContent();
   showSiteContentAdmin();
   showSiteMessage("لوگو ذخیره شد");
+}
+
+function saveHeaderContent() {
+  let content = getSiteContent();
+  let text = document.getElementById("editHeaderText").value.trim();
+  let sizeVal = parseInt(document.getElementById("editHeaderTextSize").value, 10);
+  content.headerText = text || defaultSiteContent.headerText;
+  content.headerTextSize = (sizeVal && sizeVal > 0) ? sizeVal : 22;
+  saveSiteContent(content);
+  renderSiteContent();
+  showSiteMessage("هدر سایت ذخیره شد");
 }
 
 function resetLogoImage() {
@@ -2876,6 +2971,142 @@ async function addTeamMember() {
   renderTeam();
   showSiteContentAdmin();
   showSiteMessage("عضو جدید تیم افزوده شد");
+}
+
+function showCustomSectionMessage(text, isError) {
+  let msg = document.getElementById("customSectionMessage");
+  if (!msg) return;
+  msg.innerHTML = text;
+  msg.className = isError ? "error-msg" : "success-msg";
+}
+
+function renderCustomSectionsAdmin() {
+  let content = getSiteContent();
+  let sections = content.customSections || [];
+  let box = document.getElementById("customSectionsAdminList");
+  if (!box) return;
+
+  let typeLabels = { text: "متن", image: "عکس", gif: "گیف", video: "ویدیو" };
+
+  box.innerHTML = sections.map(function (s, i) {
+    let mediaPreview = "";
+    if (s.type === "image" || s.type === "gif") {
+      mediaPreview = '<img src="' + s.content + '" style="max-width:100%;max-height:150px;border-radius:8px;display:block;margin-bottom:8px;">';
+    } else if (s.type === "video") {
+      mediaPreview = '<video src="' + s.content + '" style="max-width:100%;max-height:150px;border-radius:8px;display:block;margin-bottom:8px;" controls></video>';
+    }
+    return '<div class="custom-section-admin-box">' +
+      '<label style="display:block;text-align:right;font-size:13px;margin:4px 0;">نوع بخش: ' + (typeLabels[s.type] || s.type) + '</label>' +
+      mediaPreview +
+      '<input id="customSectionTitle_' + i + '" value="' + (s.title || "").replace(/"/g, "&quot;") + '" placeholder="عنوان بخش">' +
+      (s.type === "text" ?
+        '<textarea id="customSectionText_' + i + '" rows="3" placeholder="متن بخش">' + (s.content || "").replace(/</g, "&lt;") + '</textarea>' :
+        '<label style="display:block;text-align:right;font-size:13px;margin:8px 0 4px;">تغییر ' + (typeLabels[s.type] || "فایل") + '</label>' +
+        '<input type="file" id="customSectionFile_' + i + '" accept="' + (s.type === "video" ? "video/*" : "image/*") + '">') +
+      '<div class="row-buttons">' +
+      '<button onclick="updateCustomSection(' + i + ')">ذخیره</button>' +
+      '<button onclick="deleteCustomSection(' + i + ')" style="background:#c0392b;">حذف بخش</button>' +
+      '</div>' +
+      '</div>';
+  }).join("") || '<p class="hint">هنوز بخش سفارشی‌ای اضافه نشده است.</p>';
+}
+
+async function addCustomSection() {
+  let title = document.getElementById("newCustomSectionTitle").value.trim();
+  let type = document.getElementById("newCustomSectionType").value;
+  let textVal = document.getElementById("newCustomSectionText").value.trim();
+  let fileInput = document.getElementById("newCustomSectionFile");
+
+  let sectionContent = "";
+  if (type === "text") {
+    if (!textVal) {
+      showCustomSectionMessage("لطفاً متن بخش را وارد کنید", true);
+      return;
+    }
+    sectionContent = textVal;
+  } else {
+    if (!fileInput || fileInput.files.length === 0) {
+      showCustomSectionMessage("لطفاً یک فایل انتخاب کنید", true);
+      return;
+    }
+    try {
+      sectionContent = await fileToBase64(fileInput.files[0]);
+    } catch (e) {
+      showCustomSectionMessage("خطا در بارگذاری فایل - دوباره تلاش کنید", true);
+      return;
+    }
+  }
+
+  let content = getSiteContent();
+  let sections = content.customSections || [];
+  sections.push({ title: title, type: type, content: sectionContent });
+  content.customSections = sections;
+
+  try {
+    saveSiteContent(content);
+  } catch (e) {
+    showCustomSectionMessage("حجم فایل زیاد است، لطفاً فایل کوچک‌تری انتخاب کنید", true);
+    return;
+  }
+
+  document.getElementById("newCustomSectionTitle").value = "";
+  document.getElementById("newCustomSectionText").value = "";
+  if (fileInput) fileInput.value = "";
+
+  renderSiteContent();
+  renderCustomSectionsAdmin();
+  showCustomSectionMessage("بخش جدید افزوده شد");
+}
+
+async function updateCustomSection(index) {
+  let content = getSiteContent();
+  let sections = content.customSections || [];
+  let section = sections[index];
+  if (!section) return;
+
+  let titleInput = document.getElementById("customSectionTitle_" + index);
+  section.title = titleInput ? titleInput.value.trim() : section.title;
+
+  if (section.type === "text") {
+    let textInput = document.getElementById("customSectionText_" + index);
+    if (textInput) section.content = textInput.value.trim();
+  } else {
+    let fileInput = document.getElementById("customSectionFile_" + index);
+    if (fileInput && fileInput.files.length > 0) {
+      try {
+        section.content = await fileToBase64(fileInput.files[0]);
+      } catch (e) {
+        showCustomSectionMessage("خطا در بارگذاری فایل - دوباره تلاش کنید", true);
+        return;
+      }
+    }
+  }
+
+  sections[index] = section;
+  content.customSections = sections;
+
+  try {
+    saveSiteContent(content);
+  } catch (e) {
+    showCustomSectionMessage("حجم فایل زیاد است، لطفاً فایل کوچک‌تری انتخاب کنید", true);
+    return;
+  }
+
+  renderSiteContent();
+  renderCustomSectionsAdmin();
+  showCustomSectionMessage("بخش ذخیره شد");
+}
+
+function deleteCustomSection(index) {
+  if (!confirm("آیا از حذف این بخش مطمئن هستید؟")) return;
+  let content = getSiteContent();
+  let sections = content.customSections || [];
+  sections.splice(index, 1);
+  content.customSections = sections;
+  saveSiteContent(content);
+  renderSiteContent();
+  renderCustomSectionsAdmin();
+  showCustomSectionMessage("بخش حذف شد");
 }
 
 document.addEventListener("DOMContentLoaded", initSiteContent);
