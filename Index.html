@@ -358,6 +358,9 @@ footer{background:#111;color:white;padding:25px;text-align:center;}
   <div class="user-box" style="max-width:600px;">
     <h3>ویرایش محتوای صفحه اصلی</h3>
 
+    <h4>ترتیب بخش‌های صفحه اصلی</h4>
+    <div id="sectionOrderAdminList"></div>
+
     <h4>لوگوی سایت</h4>
     <img id="logoImagePreview" src="" style="display:none;max-height:80px;margin-bottom:8px;">
     <input type="file" id="editLogoImage" accept="image/*,image/gif">
@@ -389,8 +392,10 @@ footer{background:#111;color:white;padding:25px;text-align:center;}
     <input id="editServicesHeading" placeholder="عنوان بخش خدمات">
     <input id="editSvcTitle0" placeholder="عنوان خدمت ۱">
     <input id="editSvcDesc0" placeholder="توضیح خدمت ۱">
+    <div style="text-align:center;margin:6px 0;"><button type="button" onclick="swapServices(0,1)" style="padding:4px 12px;">جابه‌جایی خدمت ۱ و ۲ ▼▲</button></div>
     <input id="editSvcTitle1" placeholder="عنوان خدمت ۲">
     <input id="editSvcDesc1" placeholder="توضیح خدمت ۲">
+    <div style="text-align:center;margin:6px 0;"><button type="button" onclick="swapServices(1,2)" style="padding:4px 12px;">جابه‌جایی خدمت ۲ و ۳ ▼▲</button></div>
     <input id="editSvcTitle2" placeholder="عنوان خدمت ۳">
     <input id="editSvcDesc2" placeholder="توضیح خدمت ۳">
     <button onclick="saveServicesContent()">ذخیره بخش خدمات</button>
@@ -2369,6 +2374,7 @@ let defaultSiteContent = {
   headerTextSize: 22,
   logoSize: 42,
   customSections: [],
+  sectionOrder: ["home", "services", "team", "about"],
   homeTitle: "مشاوره و طراحی نیروگاه خورشیدی",
   homeSubtitle: "ارائه خدمات طراحی فنی، طرح توجیهی و مطالعات اتصال به شبکه",
   servicesHeading: "خدمات ما",
@@ -2476,6 +2482,62 @@ function renderSiteContent() {
   headerTitleEl.style.fontSize = (content.headerTextSize || 22) + "px";
 
   renderCustomSections();
+  applySectionOrder();
+}
+
+// ============================================
+// ترتیب بخش‌های اصلی صفحه (جابه‌جایی توسط مدیر)
+// ============================================
+let sectionOrderLabels = {
+  home: "بخش اصلی (سربرگ)",
+  services: "بخش خدمات",
+  team: "بخش تیم",
+  about: "بخش درباره ما"
+};
+
+function applySectionOrder() {
+  let content = getSiteContent();
+  let order = content.sectionOrder || ["home", "services", "team", "about"];
+  let mainSite = document.getElementById("mainSite");
+  let customContainer = document.getElementById("customSectionsContainer");
+  if (!mainSite || !customContainer) return;
+  order.forEach(function (id) {
+    let el = document.getElementById(id);
+    if (el) {
+      mainSite.insertBefore(el, customContainer);
+    }
+  });
+}
+
+function renderSectionOrderAdmin() {
+  let content = getSiteContent();
+  let order = content.sectionOrder || ["home", "services", "team", "about"];
+  let box = document.getElementById("sectionOrderAdminList");
+  if (!box) return;
+  box.innerHTML = order.map(function (id, i) {
+    return '<div class="record" style="display:flex;align-items:center;justify-content:space-between;">' +
+      '<span>' + (sectionOrderLabels[id] || id) + '</span>' +
+      '<span>' +
+      (i > 0 ? '<button onclick="moveSection(' + i + ',-1)" style="padding:4px 12px;margin-left:4px;">▲</button>' : '') +
+      (i < order.length - 1 ? '<button onclick="moveSection(' + i + ',1)" style="padding:4px 12px;">▼</button>' : '') +
+      '</span>' +
+      '</div>';
+  }).join("");
+}
+
+function moveSection(index, direction) {
+  let content = getSiteContent();
+  let order = content.sectionOrder || ["home", "services", "team", "about"];
+  let newIndex = index + direction;
+  if (newIndex < 0 || newIndex >= order.length) return;
+  let tmp = order[index];
+  order[index] = order[newIndex];
+  order[newIndex] = tmp;
+  content.sectionOrder = order;
+  saveSiteContent(content);
+  applySectionOrder();
+  renderSectionOrderAdmin();
+  showSiteMessage("ترتیب بخش‌های صفحه اصلی به‌روزرسانی شد");
 }
 
 // ============================================
@@ -2645,6 +2707,7 @@ function showSiteContentAdmin() {
   document.getElementById("editHeaderText").value = content.headerText;
   document.getElementById("editHeaderTextSize").value = content.headerTextSize || 22;
   renderCustomSectionsAdmin();
+  renderSectionOrderAdmin();
 
   document.getElementById("editServicesHeading").value = content.servicesHeading;
   document.getElementById("editSvcTitle0").value = content.svcTitle0;
@@ -2682,6 +2745,10 @@ function showSiteContentAdmin() {
   let box = document.getElementById("teamAdminList");
   box.innerHTML = members.map(function (m, i) {
     return '<div class="record">' +
+      '<div style="text-align:center;margin-bottom:6px;">' +
+      (i > 0 ? '<button onclick="moveTeamMember(' + i + ',-1)" style="padding:4px 12px;margin-left:4px;">▲ بالا</button>' : '') +
+      (i < members.length - 1 ? '<button onclick="moveTeamMember(' + i + ',1)" style="padding:4px 12px;">▼ پایین</button>' : '') +
+      '</div>' +
       '<img src="' + m.img + '" width="70" style="border-radius:50%;display:block;margin:0 auto 8px;">' +
       '<input id="teamName_' + i + '" value="' + m.name.replace(/"/g, "&quot;") + '" placeholder="نام">' +
       '<input id="teamRole_' + i + '" value="' + m.role.replace(/"/g, "&quot;") + '" placeholder="سمت">' +
@@ -2835,6 +2902,22 @@ function resetHomeImage() {
   showSiteMessage("تصویر پس‌زمینه به حالت پیش‌فرض بازگشت");
 }
 
+function swapServices(i, j) {
+  let titleA = document.getElementById("editSvcTitle" + i);
+  let descA = document.getElementById("editSvcDesc" + i);
+  let titleB = document.getElementById("editSvcTitle" + j);
+  let descB = document.getElementById("editSvcDesc" + j);
+  if (!titleA || !descA || !titleB || !descB) return;
+  let tmpTitle = titleA.value;
+  let tmpDesc = descA.value;
+  titleA.value = titleB.value;
+  descA.value = descB.value;
+  titleB.value = tmpTitle;
+  descB.value = tmpDesc;
+  saveServicesContent();
+  showSiteMessage("ترتیب خدمات جابه‌جا شد");
+}
+
 function saveServicesContent() {
   let content = getSiteContent();
   content.servicesHeading = document.getElementById("editServicesHeading").value.trim();
@@ -2921,6 +3004,19 @@ async function updateTeamMember(index) {
   renderTeam();
   showSiteContentAdmin();
   showSiteMessage("اطلاعات عضو تیم ذخیره شد");
+}
+
+function moveTeamMember(index, direction) {
+  let members = getTeamMembers();
+  let newIndex = index + direction;
+  if (newIndex < 0 || newIndex >= members.length) return;
+  let tmp = members[index];
+  members[index] = members[newIndex];
+  members[newIndex] = tmp;
+  saveTeamMembers(members);
+  renderTeam();
+  showSiteContentAdmin();
+  showSiteMessage("ترتیب اعضای تیم به‌روزرسانی شد");
 }
 
 function deleteTeamMember(index) {
