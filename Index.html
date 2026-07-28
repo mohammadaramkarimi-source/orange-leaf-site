@@ -1285,11 +1285,10 @@ function openUserDetail(phone, editMode) {
     notes.slice().reverse().map(function (n) {
       let fileHtml = "";
       if (n.dataUrl) {
-        let resolvedNoteUrl = resolveMediaRef(n.dataUrl);
         if (n.fileType && n.fileType.indexOf("image") === 0) {
-          fileHtml = '<img src="' + resolvedNoteUrl + '" style="max-width:100%;border-radius:8px;margin-top:6px;">';
+          fileHtml = '<img src="' + n.dataUrl + '" style="max-width:100%;border-radius:8px;margin-top:6px;">';
         } else {
-          fileHtml = '<a href="' + resolvedNoteUrl + '" download="' + (n.fileName || "file") + '">دانلود فایل: ' + (n.fileName || "") + '</a>';
+          fileHtml = '<a href="' + n.dataUrl + '" download="' + (n.fileName || "file") + '">دانلود فایل: ' + (n.fileName || "") + '</a>';
         }
       }
       return '<div class="record">' +
@@ -1327,10 +1326,7 @@ function openUserDetail(phone, editMode) {
 // یادداشت‌های مدیر برای هر کاربر (متن، عکس، فایل)
 // ============================================
 function getUserNotes(phone) {
-  return getList("notes_" + phone);
-}
-function saveUserNotes(phone, notes) {
-  saveList("notes_" + phone, notes);
+  return getList("userNotes").filter(function (n) { return n.phone === phone; });
 }
 
 async function addUserNote(phone) {
@@ -1353,7 +1349,7 @@ async function addUserNote(phone) {
 
   if (fileInput && fileInput.files.length > 0) {
     try {
-      note.dataUrl = storeMediaAndGetRef(await fileToBase64(fileInput.files[0]));
+      note.dataUrl = await fileToBase64(fileInput.files[0]);
       note.fileName = fileInput.files[0].name;
       note.fileType = fileInput.files[0].type;
     } catch (e) {
@@ -1363,11 +1359,11 @@ async function addUserNote(phone) {
     }
   }
 
-  let allNotes = getUserNotes(phone);
+  let allNotes = getList("userNotes");
   allNotes.push(note);
 
   try {
-    saveUserNotes(phone, allNotes);
+    saveList("userNotes", allNotes);
   } catch (e) {
     msg.innerHTML = "حجم فایل زیاد است، لطفاً فایل کوچک‌تری انتخاب کنید";
     msg.className = "error-msg";
@@ -1379,8 +1375,8 @@ async function addUserNote(phone) {
 
 function deleteUserNote(id, phone) {
   if (!confirm("آیا از حذف این یادداشت مطمئن هستید؟")) return;
-  let allNotes = getUserNotes(phone).filter(function (n) { return n.id !== id; });
-  saveUserNotes(phone, allNotes);
+  let allNotes = getList("userNotes").filter(function (n) { return n.id !== id; });
+  saveList("userNotes", allNotes);
   openUserDetail(phone);
 }
 
@@ -1465,28 +1461,20 @@ function saveUserEdit(originalPhone) {
   });
   saveList("contracts", contracts);
 
-  // بروزرسانی پیام‌های چت مرتبط با این کاربر (انتقال کلید قدیمی به کلید جدید)
-  let oldChatMessages = getList("chat_" + oldPhone);
-  if (oldChatMessages.length > 0) {
-    oldChatMessages.forEach(function (m) { m.phone = phone; });
-    saveList("chat_" + phone, oldChatMessages);
-    remoteStorage.removeItem("chat_" + oldPhone);
-  }
-  let chatPreviews = getChatPreviews();
-  if (chatPreviews[oldPhone]) {
-    chatPreviews[phone] = chatPreviews[oldPhone];
-    delete chatPreviews[oldPhone];
-    saveChatPreviews(chatPreviews);
-  }
+  // بروزرسانی پیام‌های چت مرتبط با این کاربر
+  let chats = getList("chats");
+  chats.forEach(function (m) {
+    if (m.phone === oldPhone) m.phone = phone;
+  });
+  saveList("chats", chats);
   if (currentChatPhone === oldPhone) currentChatPhone = phone;
 
-  // بروزرسانی یادداشت‌های مرتبط با این کاربر (انتقال کلید قدیمی به کلید جدید)
-  let oldNotes = getList("notes_" + oldPhone);
-  if (oldNotes.length > 0) {
-    oldNotes.forEach(function (n) { n.phone = phone; });
-    saveList("notes_" + phone, oldNotes);
-    remoteStorage.removeItem("notes_" + oldPhone);
-  }
+  // بروزرسانی یادداشت‌های مرتبط با این کاربر
+  let notes = getList("userNotes");
+  notes.forEach(function (n) {
+    if (n.phone === oldPhone) n.phone = phone;
+  });
+  saveList("userNotes", notes);
 
   if (currentUser && currentUser.phone === oldPhone) currentUser = user;
 
@@ -1544,19 +1532,16 @@ function deleteUser(phone) {
   let contracts = getList("contracts").filter(function (c) { return c.user !== user.name; });
   saveList("contracts", contracts);
 
-  remoteStorage.removeItem("chat_" + phone);
-  let chatPreviews = getChatPreviews();
-  if (chatPreviews[phone]) {
-    delete chatPreviews[phone];
-    saveChatPreviews(chatPreviews);
-  }
+  let chats = getList("chats").filter(function (m) { return m.phone !== phone; });
+  saveList("chats", chats);
   if (currentChatPhone === phone) {
     currentChatPhone = null;
     let chatBox = document.getElementById("chatAdminBox");
     if (chatBox) chatBox.style.display = "none";
   }
 
-  remoteStorage.removeItem("notes_" + phone);
+  let notes = getList("userNotes").filter(function (n) { return n.phone !== phone; });
+  saveList("userNotes", notes);
 
   if (currentContractUser && currentContractUser.phone === phone) {
     currentContractUser = null;
@@ -2193,31 +2178,8 @@ function showMyContract() {
 // ============================================
 let currentChatPhone = null;
 
-// هر کاربر پیام‌های خودش را در کلید جدای خودش دارد، تا باز کردن یک گفتگو
-// مجبور نباشد کل پیام‌های همه‌ی کاربران را دانلود کند
-function getChatMessages(phone) {
-  return getList("chat_" + phone);
-}
-function saveChatMessages(phone, messages) {
-  saveList("chat_" + phone, messages);
-}
-
-// خلاصه‌ی سبک آخرین پیام هر کاربر، فقط برای نمایش لیست گفتگوها در پنل مدیر
-function getChatPreviews() {
-  let data = remoteStorage.getItem("chatPreviews");
-  return data ? JSON.parse(data) : {};
-}
-function saveChatPreviews(previews) {
-  remoteStorage.setItem("chatPreviews", JSON.stringify(previews));
-}
-function updateChatPreview(phone, msg) {
-  let previews = getChatPreviews();
-  previews[phone] = {
-    sender: msg.sender,
-    text: msg.text || (msg.attachment ? "📎 " + msg.attachment.name : ""),
-    date: msg.date
-  };
-  saveChatPreviews(previews);
+function getChats() {
+  return getList("chats");
 }
 
 // رندر متن پیام به همراه پیوست (عکس/فایل) در صورت وجود
@@ -2225,12 +2187,11 @@ function renderChatMessageContent(m) {
   let html = m.text ? ('<div>' + m.text.replace(/</g, "&lt;") + '</div>') : "";
 
   if (m.attachment) {
-    let resolvedAttachmentUrl = resolveMediaRef(m.attachment.dataUrl);
-    if (resolvedAttachmentUrl && resolvedAttachmentUrl.indexOf("data:image") === 0) {
-      html += '<a href="' + resolvedAttachmentUrl + '" download="' + m.attachment.name + '" target="_blank">' +
-        '<img src="' + resolvedAttachmentUrl + '" style="max-width:180px;max-height:180px;border-radius:8px;display:block;margin-top:6px;"></a>';
+    if (m.attachment.dataUrl && m.attachment.dataUrl.indexOf("data:image") === 0) {
+      html += '<a href="' + m.attachment.dataUrl + '" download="' + m.attachment.name + '" target="_blank">' +
+        '<img src="' + m.attachment.dataUrl + '" style="max-width:180px;max-height:180px;border-radius:8px;display:block;margin-top:6px;"></a>';
     } else {
-      html += '<div style="margin-top:6px;">📎 <a href="' + resolvedAttachmentUrl + '" download="' + m.attachment.name + '">' + m.attachment.name + '</a></div>';
+      html += '<div style="margin-top:6px;">📎 <a href="' + m.attachment.dataUrl + '" download="' + m.attachment.name + '">' + m.attachment.name + '</a></div>';
     }
   }
 
@@ -2248,10 +2209,12 @@ function renderChatUsersList() {
     return;
   }
 
-  let previews = getChatPreviews();
+  let chats = getChats();
   box.innerHTML = users.map(function (u) {
-    let last = previews[u.phone];
-    let preview = last ? ((last.sender === "admin" ? "شما: " : "") + last.text).slice(0, 40) : "هنوز پیامی ارسال نشده";
+    let mine = chats.filter(function (m) { return m.phone === u.phone; });
+    let last = mine.length ? mine[mine.length - 1] : null;
+    let lastText = last ? (last.text || (last.attachment ? "📎 " + last.attachment.name : "")) : "";
+    let preview = last ? ((last.sender === "admin" ? "شما: " : "") + lastText).slice(0, 40) : "هنوز پیامی ارسال نشده";
     return '<div class="record clickable-row" onclick="openAdminChat(\'' + u.phone.replace(/'/g, "\\'") + '\')">' +
       '<p>' + u.name + ' — ' + u.phone + '</p><p class="hint">' + preview + '</p></div>';
   }).join("");
@@ -2273,7 +2236,7 @@ function renderAdminChatMessages() {
   let box = document.getElementById("chatAdminMessages");
   if (!box) return;
 
-  let messages = getChatMessages(currentChatPhone);
+  let messages = getChats().filter(function (m) { return m.phone === currentChatPhone; });
   if (messages.length === 0) {
     box.innerHTML = "<p>هنوز پیامی رد و بدل نشده است</p>";
   } else {
@@ -2297,25 +2260,24 @@ async function sendAdminChatMessage() {
   let attachment = null;
   if (fileInput && fileInput.files.length > 0) {
     try {
-      attachment = { name: fileInput.files[0].name, dataUrl: storeMediaAndGetRef(await fileToBase64(fileInput.files[0])) };
+      attachment = { name: fileInput.files[0].name, dataUrl: await fileToBase64(fileInput.files[0]) };
     } catch (e) {
       if (msg) { msg.innerHTML = "خطا در بارگذاری فایل - دوباره تلاش کنید"; msg.className = "error-msg"; }
       return;
     }
   }
 
-  let chats = getChatMessages(currentChatPhone);
+  let chats = getChats();
   let newMsg = { phone: currentChatPhone, sender: "admin", text: text, date: new Date().toLocaleString("fa-IR") };
   if (attachment) newMsg.attachment = attachment;
   chats.push(newMsg);
 
   try {
-    saveChatMessages(currentChatPhone, chats);
+    saveList("chats", chats);
   } catch (e) {
     if (msg) { msg.innerHTML = "حجم فایل زیاد است، لطفاً فایل کوچک‌تری انتخاب کنید"; msg.className = "error-msg"; }
     return;
   }
-  updateChatPreview(currentChatPhone, newMsg);
 
   if (msg) { msg.innerHTML = ""; }
   input.value = "";
@@ -2330,7 +2292,7 @@ function renderUserChatMessages() {
   let box = document.getElementById("chatUserMessages");
   if (!box) return;
 
-  let messages = getChatMessages(currentUser.phone);
+  let messages = getChats().filter(function (m) { return m.phone === currentUser.phone; });
   if (messages.length === 0) {
     box.innerHTML = "<p>هنوز پیامی رد و بدل نشده است</p>";
   } else {
@@ -2354,25 +2316,24 @@ async function sendUserChatMessage() {
   let attachment = null;
   if (fileInput && fileInput.files.length > 0) {
     try {
-      attachment = { name: fileInput.files[0].name, dataUrl: storeMediaAndGetRef(await fileToBase64(fileInput.files[0])) };
+      attachment = { name: fileInput.files[0].name, dataUrl: await fileToBase64(fileInput.files[0]) };
     } catch (e) {
       if (msg) { msg.innerHTML = "خطا در بارگذاری فایل - دوباره تلاش کنید"; msg.className = "error-msg"; }
       return;
     }
   }
 
-  let chats = getChatMessages(currentUser.phone);
+  let chats = getChats();
   let newMsg = { phone: currentUser.phone, sender: "user", text: text, date: new Date().toLocaleString("fa-IR") };
   if (attachment) newMsg.attachment = attachment;
   chats.push(newMsg);
 
   try {
-    saveChatMessages(currentUser.phone, chats);
+    saveList("chats", chats);
   } catch (e) {
     if (msg) { msg.innerHTML = "حجم فایل زیاد است، لطفاً فایل کوچک‌تری انتخاب کنید"; msg.className = "error-msg"; }
     return;
   }
-  updateChatPreview(currentUser.phone, newMsg);
 
   if (msg) { msg.innerHTML = ""; }
   input.value = "";
