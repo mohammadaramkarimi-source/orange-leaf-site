@@ -1160,7 +1160,7 @@ async function saveProject() {
             return;
           }
           try {
-            let dataUrl = await fileToBase64(fileInput.files[0]);
+            let dataUrl = storeMediaAndGetRef(await fileToBase64(fileInput.files[0]));
             docs.push({ label: docDef.label, type: "file", fileName: fileInput.files[0].name, dataUrl: dataUrl });
           } catch (e) {
             msg.innerHTML = "خطا در خواندن فایل - دوباره تلاش کنید";
@@ -1237,7 +1237,7 @@ function openUserDetail(phone, editMode) {
       let servicesText = p.services.map(function (s) {
         let docsText = (s.docs && s.docs.length) ? " (" + s.docs.map(function (d) {
           if (d.type === "text") return d.label + ": " + d.value;
-          return d.label + ": " + d.fileName + ' (<a href="' + d.dataUrl + '" download="' + d.fileName + '">دانلود</a>)';
+          return d.label + ": " + d.fileName + ' (<a href="' + resolveMediaRef(d.dataUrl) + '" download="' + d.fileName + '">دانلود</a>)';
         }).join("، ") + ")" : "";
         return s.name + docsText;
       }).join(" - ");
@@ -1246,7 +1246,7 @@ function openUserDetail(phone, editMode) {
 
   let contractsHtml = contracts.length === 0 ? "<p>قراردادی ثبت نشده</p>" :
     contracts.map(function (c) {
-      let downloadLink = c.dataUrl ? ' - <a href="' + c.dataUrl + '" download="' + c.file + '">دانلود</a>' : "";
+      let downloadLink = c.dataUrl ? ' - <a href="' + resolveMediaRef(c.dataUrl) + '" download="' + c.file + '">دانلود</a>' : "";
       return '<div class="record"><p>فایل: ' + c.file + downloadLink + ' - تاریخ: ' + c.date + ' - وضعیت: ' + c.status + '</p></div>';
     }).join("");
 
@@ -1285,10 +1285,11 @@ function openUserDetail(phone, editMode) {
     notes.slice().reverse().map(function (n) {
       let fileHtml = "";
       if (n.dataUrl) {
+        let noteUrl = resolveMediaRef(n.dataUrl);
         if (n.fileType && n.fileType.indexOf("image") === 0) {
-          fileHtml = '<img src="' + n.dataUrl + '" style="max-width:100%;border-radius:8px;margin-top:6px;">';
+          fileHtml = '<img src="' + noteUrl + '" style="max-width:100%;border-radius:8px;margin-top:6px;">';
         } else {
-          fileHtml = '<a href="' + n.dataUrl + '" download="' + (n.fileName || "file") + '">دانلود فایل: ' + (n.fileName || "") + '</a>';
+          fileHtml = '<a href="' + noteUrl + '" download="' + (n.fileName || "file") + '">دانلود فایل: ' + (n.fileName || "") + '</a>';
         }
       }
       return '<div class="record">' +
@@ -1349,7 +1350,7 @@ async function addUserNote(phone) {
 
   if (fileInput && fileInput.files.length > 0) {
     try {
-      note.dataUrl = await fileToBase64(fileInput.files[0]);
+      note.dataUrl = storeMediaAndGetRef(await fileToBase64(fileInput.files[0]));
       note.fileName = fileInput.files[0].name;
       note.fileType = fileInput.files[0].type;
     } catch (e) {
@@ -1574,7 +1575,7 @@ function showProjects() {
     let servicesText = p.services.map(function (s) {
       let docsText = (s.docs && s.docs.length) ? " (مدارک: " + s.docs.map(function (d) {
         if (d.type === "text") return d.label + ": " + d.value;
-        return d.label + ": " + d.fileName + ' (<a href="' + d.dataUrl + '" download="' + d.fileName + '">دانلود</a>)';
+        return d.label + ": " + d.fileName + ' (<a href="' + resolveMediaRef(d.dataUrl) + '" download="' + d.fileName + '">دانلود</a>)';
       }).join("، ") + ")" : "";
       return s.name + docsText;
     }).join(" - ");
@@ -1716,7 +1717,7 @@ async function saveProjectEdit(id) {
           let fileInput = document.querySelector('.editDocFile[data-project="' + id + '"][data-service="' + serviceName + '"][data-doclabel="' + docDef.label + '"]');
           if (fileInput && fileInput.files.length > 0) {
             try {
-              let dataUrl = await fileToBase64(fileInput.files[0]);
+              let dataUrl = storeMediaAndGetRef(await fileToBase64(fileInput.files[0]));
               docs.push({ label: docDef.label, type: "file", fileName: fileInput.files[0].name, dataUrl: dataUrl });
             } catch (e) {
               alert("خطا در خواندن فایل - دوباره تلاش کنید");
@@ -2076,7 +2077,7 @@ async function uploadContract() {
 
   let dataUrl;
   try {
-    dataUrl = await fileToBase64(fileInput.files[0]);
+    dataUrl = storeMediaAndGetRef(await fileToBase64(fileInput.files[0]));
   } catch (e) {
     msg.innerHTML = "خطا در خواندن فایل - دوباره تلاش کنید";
     msg.className = "error-msg";
@@ -2122,7 +2123,7 @@ function renderContractsAdmin() {
   }
 
   box.innerHTML = contracts.map(function (c) {
-    let downloadLink = c.dataUrl ? ' - <a href="' + c.dataUrl + '" download="' + c.file + '">دانلود</a>' : "";
+    let downloadLink = c.dataUrl ? ' - <a href="' + resolveMediaRef(c.dataUrl) + '" download="' + c.file + '">دانلود</a>' : "";
     let optionsHtml = contractStatusOptions.map(function (s) {
       return '<option value="' + s + '" ' + (s === c.status ? "selected" : "") + '>' + s + '</option>';
     }).join("");
@@ -2168,7 +2169,7 @@ function showMyContract() {
 
   status.innerHTML = "قرارداد شما ثبت شده است";
   info.innerHTML = mine.map(function (c) {
-    let downloadLink = c.dataUrl ? ' - <a href="' + c.dataUrl + '" download="' + c.file + '">دانلود قرارداد</a>' : "";
+    let downloadLink = c.dataUrl ? ' - <a href="' + resolveMediaRef(c.dataUrl) + '" download="' + c.file + '">دانلود قرارداد</a>' : "";
     return "<p>نام فایل: " + c.file + downloadLink + "</p><p>تاریخ ثبت: " + c.date + "</p><p>وضعیت: " + c.status + "</p>";
   }).join("");
 }
@@ -2187,11 +2188,12 @@ function renderChatMessageContent(m) {
   let html = m.text ? ('<div>' + m.text.replace(/</g, "&lt;") + '</div>') : "";
 
   if (m.attachment) {
-    if (m.attachment.dataUrl && m.attachment.dataUrl.indexOf("data:image") === 0) {
-      html += '<a href="' + m.attachment.dataUrl + '" download="' + m.attachment.name + '" target="_blank">' +
-        '<img src="' + m.attachment.dataUrl + '" style="max-width:180px;max-height:180px;border-radius:8px;display:block;margin-top:6px;"></a>';
+    let attUrl = resolveMediaRef(m.attachment.dataUrl);
+    if (attUrl && attUrl.indexOf("data:image") === 0) {
+      html += '<a href="' + attUrl + '" download="' + m.attachment.name + '" target="_blank">' +
+        '<img src="' + attUrl + '" style="max-width:180px;max-height:180px;border-radius:8px;display:block;margin-top:6px;"></a>';
     } else {
-      html += '<div style="margin-top:6px;">📎 <a href="' + m.attachment.dataUrl + '" download="' + m.attachment.name + '">' + m.attachment.name + '</a></div>';
+      html += '<div style="margin-top:6px;">📎 <a href="' + attUrl + '" download="' + m.attachment.name + '">' + m.attachment.name + '</a></div>';
     }
   }
 
@@ -2260,7 +2262,7 @@ async function sendAdminChatMessage() {
   let attachment = null;
   if (fileInput && fileInput.files.length > 0) {
     try {
-      attachment = { name: fileInput.files[0].name, dataUrl: await fileToBase64(fileInput.files[0]) };
+      attachment = { name: fileInput.files[0].name, dataUrl: storeMediaAndGetRef(await fileToBase64(fileInput.files[0])) };
     } catch (e) {
       if (msg) { msg.innerHTML = "خطا در بارگذاری فایل - دوباره تلاش کنید"; msg.className = "error-msg"; }
       return;
@@ -2316,7 +2318,7 @@ async function sendUserChatMessage() {
   let attachment = null;
   if (fileInput && fileInput.files.length > 0) {
     try {
-      attachment = { name: fileInput.files[0].name, dataUrl: await fileToBase64(fileInput.files[0]) };
+      attachment = { name: fileInput.files[0].name, dataUrl: storeMediaAndGetRef(await fileToBase64(fileInput.files[0])) };
     } catch (e) {
       if (msg) { msg.innerHTML = "خطا در بارگذاری فایل - دوباره تلاش کنید"; msg.className = "error-msg"; }
       return;
@@ -2403,7 +2405,7 @@ let defaultSiteContent = {
   headerTextSize: 22,
   logoSize: 42,
   customSections: [],
-  sectionOrder: ["home", "services", "team", "about"],
+  sectionOrder: ["home", "services", "team", "about", "custom"],
   homeTitle: "مشاوره و طراحی نیروگاه خورشیدی",
   homeSubtitle: "ارائه خدمات طراحی فنی، طرح توجیهی و مطالعات اتصال به شبکه",
   servicesHeading: "خدمات ما",
@@ -2521,26 +2523,40 @@ let sectionOrderLabels = {
   home: "بخش اصلی (سربرگ)",
   services: "بخش خدمات",
   team: "بخش تیم",
-  about: "بخش درباره ما"
+  about: "بخش درباره ما",
+  custom: "بخش‌های سفارشی (همه با هم)"
 };
+let sectionOrderDomIds = {
+  custom: "customSectionsContainer"
+};
+let defaultSectionOrderList = ["home", "services", "team", "about", "custom"];
+
+// لیست ترتیب را با فهرست شناخته‌شده هماهنگ می‌کند: مقادیر ناشناس حذف و موارد جاافتاده اضافه می‌شوند
+function normalizeSectionOrder(order) {
+  let cleaned = (order || []).filter(function (id) { return defaultSectionOrderList.indexOf(id) !== -1; });
+  defaultSectionOrderList.forEach(function (id) {
+    if (cleaned.indexOf(id) === -1) cleaned.push(id);
+  });
+  return cleaned;
+}
 
 function applySectionOrder() {
   let content = getSiteContent();
-  let order = content.sectionOrder || ["home", "services", "team", "about"];
+  let order = normalizeSectionOrder(content.sectionOrder);
   let mainSite = document.getElementById("mainSite");
-  let customContainer = document.getElementById("customSectionsContainer");
-  if (!mainSite || !customContainer) return;
+  if (!mainSite) return;
   order.forEach(function (id) {
-    let el = document.getElementById(id);
+    let elId = sectionOrderDomIds[id] || id;
+    let el = document.getElementById(elId);
     if (el) {
-      mainSite.insertBefore(el, customContainer);
+      mainSite.appendChild(el);
     }
   });
 }
 
 function renderSectionOrderAdmin() {
   let content = getSiteContent();
-  let order = content.sectionOrder || ["home", "services", "team", "about"];
+  let order = normalizeSectionOrder(content.sectionOrder);
   let box = document.getElementById("sectionOrderAdminList");
   if (!box) return;
   box.innerHTML = order.map(function (id, i) {
@@ -2556,7 +2572,7 @@ function renderSectionOrderAdmin() {
 
 function moveSection(index, direction) {
   let content = getSiteContent();
-  let order = content.sectionOrder || ["home", "services", "team", "about"];
+  let order = normalizeSectionOrder(content.sectionOrder);
   let newIndex = index + direction;
   if (newIndex < 0 || newIndex >= order.length) return;
   let tmp = order[index];
