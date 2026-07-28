@@ -1285,10 +1285,11 @@ function openUserDetail(phone, editMode) {
     notes.slice().reverse().map(function (n) {
       let fileHtml = "";
       if (n.dataUrl) {
+        let resolvedNoteUrl = resolveMediaRef(n.dataUrl);
         if (n.fileType && n.fileType.indexOf("image") === 0) {
-          fileHtml = '<img src="' + n.dataUrl + '" style="max-width:100%;border-radius:8px;margin-top:6px;">';
+          fileHtml = '<img src="' + resolvedNoteUrl + '" style="max-width:100%;border-radius:8px;margin-top:6px;">';
         } else {
-          fileHtml = '<a href="' + n.dataUrl + '" download="' + (n.fileName || "file") + '">دانلود فایل: ' + (n.fileName || "") + '</a>';
+          fileHtml = '<a href="' + resolvedNoteUrl + '" download="' + (n.fileName || "file") + '">دانلود فایل: ' + (n.fileName || "") + '</a>';
         }
       }
       return '<div class="record">' +
@@ -1349,7 +1350,7 @@ async function addUserNote(phone) {
 
   if (fileInput && fileInput.files.length > 0) {
     try {
-      note.dataUrl = await fileToBase64(fileInput.files[0]);
+      note.dataUrl = storeMediaAndGetRef(await fileToBase64(fileInput.files[0]));
       note.fileName = fileInput.files[0].name;
       note.fileType = fileInput.files[0].type;
     } catch (e) {
@@ -2187,11 +2188,12 @@ function renderChatMessageContent(m) {
   let html = m.text ? ('<div>' + m.text.replace(/</g, "&lt;") + '</div>') : "";
 
   if (m.attachment) {
-    if (m.attachment.dataUrl && m.attachment.dataUrl.indexOf("data:image") === 0) {
-      html += '<a href="' + m.attachment.dataUrl + '" download="' + m.attachment.name + '" target="_blank">' +
-        '<img src="' + m.attachment.dataUrl + '" style="max-width:180px;max-height:180px;border-radius:8px;display:block;margin-top:6px;"></a>';
+    let resolvedAttachmentUrl = resolveMediaRef(m.attachment.dataUrl);
+    if (resolvedAttachmentUrl && resolvedAttachmentUrl.indexOf("data:image") === 0) {
+      html += '<a href="' + resolvedAttachmentUrl + '" download="' + m.attachment.name + '" target="_blank">' +
+        '<img src="' + resolvedAttachmentUrl + '" style="max-width:180px;max-height:180px;border-radius:8px;display:block;margin-top:6px;"></a>';
     } else {
-      html += '<div style="margin-top:6px;">📎 <a href="' + m.attachment.dataUrl + '" download="' + m.attachment.name + '">' + m.attachment.name + '</a></div>';
+      html += '<div style="margin-top:6px;">📎 <a href="' + resolvedAttachmentUrl + '" download="' + m.attachment.name + '">' + m.attachment.name + '</a></div>';
     }
   }
 
@@ -2260,7 +2262,7 @@ async function sendAdminChatMessage() {
   let attachment = null;
   if (fileInput && fileInput.files.length > 0) {
     try {
-      attachment = { name: fileInput.files[0].name, dataUrl: await fileToBase64(fileInput.files[0]) };
+      attachment = { name: fileInput.files[0].name, dataUrl: storeMediaAndGetRef(await fileToBase64(fileInput.files[0])) };
     } catch (e) {
       if (msg) { msg.innerHTML = "خطا در بارگذاری فایل - دوباره تلاش کنید"; msg.className = "error-msg"; }
       return;
@@ -2316,7 +2318,7 @@ async function sendUserChatMessage() {
   let attachment = null;
   if (fileInput && fileInput.files.length > 0) {
     try {
-      attachment = { name: fileInput.files[0].name, dataUrl: await fileToBase64(fileInput.files[0]) };
+      attachment = { name: fileInput.files[0].name, dataUrl: storeMediaAndGetRef(await fileToBase64(fileInput.files[0])) };
     } catch (e) {
       if (msg) { msg.innerHTML = "خطا در بارگذاری فایل - دوباره تلاش کنید"; msg.className = "error-msg"; }
       return;
