@@ -41,7 +41,7 @@ nav a:hover{background:white;color:#063970;}
   opacity:0;transition:opacity 1.2s ease-in-out;
 }
 .home-slide.active{opacity:1;}
-.home-overlay{position:absolute;inset:0;background:rgba(0,40,85,.28);z-index:1;}
+.home-overlay{position:absolute;inset:0;background:rgba(0,20,45,.08);z-index:1;pointer-events:none;}
 #homeContent{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;}
 #home h1{font-size:38px;margin-bottom:20px;text-shadow:0 2px 10px rgba(0,0,0,.55);}
 #home p{font-size:18px;max-width:700px;text-shadow:0 1px 6px rgba(0,0,0,.55);}
@@ -171,7 +171,7 @@ footer{background:#111;color:white;padding:25px;text-align:center;}
   </div>
 </section>
 
-<div class="home-button-wrap">
+<div class="home-button-wrap" id="homeButtonWrap">
   <button id="homeCtaButton" onclick="goToPage('login')">ثبت درخواست پروژه</button>
 </div>
 
@@ -430,7 +430,9 @@ footer{background:#111;color:white;padding:25px;text-align:center;}
 
     <label style="display:block;text-align:right;font-size:14px;margin:14px 0 4px;">اندازه دکمه «ثبت درخواست پروژه» (پیکسل)</label>
     <input id="editHomeButtonSize" type="number" min="12" max="40" placeholder="مثال: 16">
-    <button onclick="saveHomeButtonSize()">ذخیره اندازه دکمه</button>
+    <label class="checkbox-row"><input type="checkbox" id="editHomeButtonEnabled"> نمایش دکمه «ثبت درخواست پروژه»</label>
+    <button onclick="saveHomeButtonSize()">ذخیره اندازه و نمایش دکمه</button>
+    <p class="hint" style="text-align:right;">برای جابه‌جایی موقعیت دکمه نسبت به بخش‌های دیگر، به قسمت «ترتیب بخش‌های صفحه اصلی» در پایین همین پنل مراجعه کنید.</p>
 
     <h4 style="margin-top:20px;">بخش خدمات ما</h4>
     <input id="editServicesHeading" placeholder="عنوان بخش خدمات">
@@ -2460,6 +2462,7 @@ let defaultSiteContent = {
   homeSubtitle: "ارائه خدمات طراحی فنی، طرح توجیهی و مطالعات اتصال به شبکه",
   homeImages: [],
   homeButtonSize: 16,
+  homeButtonEnabled: true,
   servicesHeading: "خدمات ما",
   svcTitle0: "طراحی فنی نیروگاه",
   svcDesc0: "طراحی تجهیزات و نقشه‌های اجرایی",
@@ -2578,6 +2581,10 @@ function renderSiteContent() {
   if (homeButton) {
     homeButton.style.fontSize = (content.homeButtonSize !== undefined ? content.homeButtonSize : 16) + "px";
   }
+  let homeButtonWrap = document.getElementById("homeButtonWrap");
+  if (homeButtonWrap) {
+    homeButtonWrap.style.display = content.homeButtonEnabled === false ? "none" : "";
+  }
 
   document.getElementById("servicesHeading").textContent = content.servicesHeading;
   document.getElementById("svcTitle0").textContent = content.svcTitle0;
@@ -2665,15 +2672,17 @@ function openSectionDetailPage(kind, sectionId) {
 // ============================================
 let sectionOrderLabels = {
   home: "بخش اصلی (سربرگ)",
+  homeButton: "دکمه ثبت درخواست پروژه",
   services: "بخش خدمات",
   team: "بخش تیم",
   about: "بخش درباره ما",
   custom: "بخش‌های سفارشی (همه با هم)"
 };
 let sectionOrderDomIds = {
-  custom: "customSectionsContainer"
+  custom: "customSectionsContainer",
+  homeButton: "homeButtonWrap"
 };
-let defaultSectionOrderList = ["home", "services", "team", "about", "custom"];
+let defaultSectionOrderList = ["home", "homeButton", "services", "team", "about", "custom"];
 
 // لیست ترتیب را با فهرست شناخته‌شده هماهنگ می‌کند: مقادیر ناشناس حذف و موارد جاافتاده اضافه می‌شوند
 function normalizeSectionOrder(order) {
@@ -2923,6 +2932,7 @@ function showSiteContentAdmin() {
   document.getElementById("editHomeTitle").value = content.homeTitle;
   document.getElementById("editHomeSubtitle").value = content.homeSubtitle;
   document.getElementById("editHomeButtonSize").value = content.homeButtonSize !== undefined ? content.homeButtonSize : 16;
+  document.getElementById("editHomeButtonEnabled").checked = content.homeButtonEnabled !== false;
   renderHomeImagesAdmin(content);
 
   let logoPreview = document.getElementById("logoImagePreview");
@@ -3180,9 +3190,10 @@ function saveHomeButtonSize() {
   let content = getSiteContent();
   let val = parseInt(document.getElementById("editHomeButtonSize").value, 10);
   content.homeButtonSize = isNaN(val) ? 16 : val;
+  content.homeButtonEnabled = document.getElementById("editHomeButtonEnabled").checked;
   saveSiteContent(content);
   renderSiteContent();
-  showSiteMessage("اندازه دکمه ذخیره شد");
+  showSiteMessage("تنظیمات دکمه ذخیره شد");
 }
 
 function resetHomeImage() {
