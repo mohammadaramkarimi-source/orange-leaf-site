@@ -37,15 +37,33 @@ nav a:hover{background:white;color:#063970;}
 .home-slides{position:absolute;inset:0;z-index:0;}
 .home-slide{
   position:absolute;inset:0;
-  background-size:cover;background-position:center;
+  background-size:cover;background-position:center;background-repeat:no-repeat;
   opacity:0;transition:opacity 1.2s ease-in-out;
 }
+.home-slide.fit-contain{background-size:contain;background-color:#063970;}
 .home-slide.active{opacity:1;}
 .home-overlay{position:absolute;inset:0;background:rgba(0,20,45,.08);z-index:1;pointer-events:none;}
+.home-slide-nav{position:absolute;inset:0;z-index:3;pointer-events:none;}
+.home-slide-arrow{
+  position:absolute;top:50%;transform:translateY(-50%);
+  background:rgba(0,0,0,.35);color:white;border:none;
+  width:42px;height:42px;border-radius:50%;font-size:24px;line-height:1;
+  cursor:pointer;pointer-events:auto;transition:background .2s;
+}
+.home-slide-arrow:hover{background:rgba(0,0,0,.6);}
+.home-slide-arrow-prev{right:16px;}
+.home-slide-arrow-next{left:16px;}
+.home-slide-dots{position:absolute;bottom:16px;left:0;right:0;display:flex;justify-content:center;gap:8px;pointer-events:none;}
+.home-slide-dot{
+  width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,.5);
+  cursor:pointer;pointer-events:auto;transition:background .2s,transform .2s;
+}
+.home-slide-dot.active{background:#ff9800;transform:scale(1.2);}
 #homeContent{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;}
 #home h1{font-size:38px;margin-bottom:20px;text-shadow:0 2px 10px rgba(0,0,0,.55);}
 #home p{font-size:18px;max-width:700px;text-shadow:0 1px 6px rgba(0,0,0,.55);}
 
+#home.fit-contain-mode{aspect-ratio:16/9;min-height:0;}
 .home-button-wrap{text-align:center;padding:28px 7%;background:#f4f8fc;}
 #homeCtaButton{padding:0.75em 1.9em;border-radius:10px;margin-top:0;}
 
@@ -165,6 +183,7 @@ footer{background:#111;color:white;padding:25px;text-align:center;}
 <section id="home">
   <div class="home-slides" id="homeSlides"></div>
   <div class="home-overlay"></div>
+  <div class="home-slide-nav" id="homeSlideNav"></div>
   <div id="homeContent">
     <h1 id="homeTitle">مشاوره و طراحی نیروگاه خورشیدی</h1>
     <p id="homeSubtitle">ارائه خدمات طراحی فنی، طرح توجیهی و مطالعات اتصال به شبکه</p>
@@ -423,6 +442,17 @@ footer{background:#111;color:white;padding:25px;text-align:center;}
     <div id="homeImagesList"></div>
     <input type="file" id="editHomeImage" accept="image/*" multiple>
     <p class="hint" style="text-align:right;">می‌توانید چند عکس را همزمان انتخاب کنید تا به‌صورت اسلایدی نمایش داده شوند.</p>
+
+    <label style="display:block;text-align:right;font-size:14px;margin:12px 0 4px;">نحوه نمایش عکس‌ها</label>
+    <select id="editHomeImageFit">
+      <option value="cover">پر کردن کامل کادر (ممکن است لبه‌های عکس بریده شود)</option>
+      <option value="contain">نمایش کامل عکس بدون هیچ برشی (مناسب عکس‌هایی که خودشان متن یا طرح دارند)</option>
+    </select>
+
+    <label style="display:block;text-align:right;font-size:14px;margin:12px 0 4px;">سرعت تغییر خودکار اسلایدها (ثانیه)</label>
+    <input id="editHomeSlideSpeed" type="number" min="1" max="30" placeholder="مثال: 4">
+    <p class="hint" style="text-align:right;">علاوه بر تغییر خودکار، همیشه می‌توانید با پیکان‌ها یا نقطه‌های زیر عکس، به‌صورت دستی هم عکس‌ها را جابه‌جا کنید.</p>
+
     <div class="row-buttons" style="justify-content:flex-start;">
       <button onclick="saveHomeContent()">افزودن / ذخیره عکس‌ها</button>
       <button onclick="resetHomeImage()" style="background:#555;">حذف همه و بازگشت به تصویر پیش‌فرض</button>
@@ -2461,6 +2491,8 @@ let defaultSiteContent = {
   homeTitle: "مشاوره و طراحی نیروگاه خورشیدی",
   homeSubtitle: "ارائه خدمات طراحی فنی، طرح توجیهی و مطالعات اتصال به شبکه",
   homeImages: [],
+  homeImageFit: "cover",
+  homeSlideSpeed: 4,
   homeButtonSize: 16,
   homeButtonEnabled: true,
   servicesHeading: "خدمات ما",
@@ -2537,11 +2569,54 @@ function saveTeamMembers(members) {
 let homeSlideInterval = null;
 let homeSlideIndex = 0;
 
+function goHomeSlideTo(index) {
+  let container = document.getElementById("homeSlides");
+  let navContainer = document.getElementById("homeSlideNav");
+  if (!container) return;
+  let slides = container.querySelectorAll(".home-slide");
+  let dots = navContainer ? navContainer.querySelectorAll(".home-slide-dot") : [];
+  if (!slides.length) return;
+  index = ((index % slides.length) + slides.length) % slides.length;
+  slides[homeSlideIndex] && slides[homeSlideIndex].classList.remove("active");
+  dots[homeSlideIndex] && dots[homeSlideIndex].classList.remove("active");
+  homeSlideIndex = index;
+  slides[homeSlideIndex].classList.add("active");
+  dots[homeSlideIndex] && dots[homeSlideIndex].classList.add("active");
+}
+
+function homeSlideNext() { goHomeSlideTo(homeSlideIndex + 1); restartHomeSlideAutoplay(); }
+function homeSlidePrev() { goHomeSlideTo(homeSlideIndex - 1); restartHomeSlideAutoplay(); }
+function homeSlideGoManual(index) { goHomeSlideTo(index); restartHomeSlideAutoplay(); }
+
+function restartHomeSlideAutoplay() {
+  if (homeSlideInterval) {
+    clearInterval(homeSlideInterval);
+    homeSlideInterval = null;
+  }
+  let content = getSiteContent();
+  let container = document.getElementById("homeSlides");
+  if (!container) return;
+  let count = container.querySelectorAll(".home-slide").length;
+  if (count < 2) return;
+  let seconds = Number(content.homeSlideSpeed);
+  if (!seconds || seconds < 1) seconds = 4;
+  homeSlideInterval = setInterval(function () {
+    goHomeSlideTo(homeSlideIndex + 1);
+  }, seconds * 1000);
+}
+
 function renderHomeSlideshow(content) {
   let container = document.getElementById("homeSlides");
+  let navContainer = document.getElementById("homeSlideNav");
   if (!container) return;
 
   let images = (content.homeImages || []).filter(Boolean);
+  let fit = content.homeImageFit === "contain" ? "contain" : "cover";
+
+  let homeEl = document.getElementById("home");
+  if (homeEl) {
+    homeEl.classList.toggle("fit-contain-mode", fit === "contain" && images.length > 0);
+  }
 
   if (homeSlideInterval) {
     clearInterval(homeSlideInterval);
@@ -2550,24 +2625,32 @@ function renderHomeSlideshow(content) {
 
   if (images.length === 0) {
     container.innerHTML = "";
+    if (navContainer) navContainer.innerHTML = "";
     return;
   }
 
   container.innerHTML = images.map(function (ref, i) {
-    return '<div class="home-slide' + (i === 0 ? " active" : "") + '" style="background-image:url(\'' + resolveMediaRef(ref) + '\')"></div>';
+    return '<div class="home-slide' + (fit === "contain" ? " fit-contain" : "") + (i === 0 ? " active" : "") + '" style="background-image:url(\'' + resolveMediaRef(ref) + '\')"></div>';
   }).join("");
+
+  if (navContainer) {
+    if (images.length > 1) {
+      navContainer.innerHTML =
+        '<button type="button" class="home-slide-arrow home-slide-arrow-prev" onclick="homeSlidePrev()">‹</button>' +
+        '<button type="button" class="home-slide-arrow home-slide-arrow-next" onclick="homeSlideNext()">›</button>' +
+        '<div class="home-slide-dots">' +
+        images.map(function (ref, i) {
+          return '<span class="home-slide-dot' + (i === 0 ? " active" : "") + '" onclick="homeSlideGoManual(' + i + ')"></span>';
+        }).join("") +
+        '</div>';
+    } else {
+      navContainer.innerHTML = "";
+    }
+  }
 
   homeSlideIndex = 0;
 
-  if (images.length > 1) {
-    homeSlideInterval = setInterval(function () {
-      let slides = container.querySelectorAll(".home-slide");
-      if (slides.length < 2) return;
-      slides[homeSlideIndex].classList.remove("active");
-      homeSlideIndex = (homeSlideIndex + 1) % slides.length;
-      slides[homeSlideIndex].classList.add("active");
-    }, 4000);
-  }
+  restartHomeSlideAutoplay();
 }
 
 function renderSiteContent() {
@@ -2933,6 +3016,8 @@ function showSiteContentAdmin() {
   document.getElementById("editHomeSubtitle").value = content.homeSubtitle;
   document.getElementById("editHomeButtonSize").value = content.homeButtonSize !== undefined ? content.homeButtonSize : 16;
   document.getElementById("editHomeButtonEnabled").checked = content.homeButtonEnabled !== false;
+  document.getElementById("editHomeImageFit").value = content.homeImageFit === "contain" ? "contain" : "cover";
+  document.getElementById("editHomeSlideSpeed").value = content.homeSlideSpeed || 4;
   renderHomeImagesAdmin(content);
 
   let logoPreview = document.getElementById("logoImagePreview");
@@ -3158,6 +3243,9 @@ async function saveHomeContent() {
   let content = getSiteContent();
   content.homeTitle = document.getElementById("editHomeTitle").value.trim();
   content.homeSubtitle = document.getElementById("editHomeSubtitle").value.trim();
+  content.homeImageFit = document.getElementById("editHomeImageFit").value === "contain" ? "contain" : "cover";
+  let speedVal = parseFloat(document.getElementById("editHomeSlideSpeed").value);
+  content.homeSlideSpeed = (!speedVal || speedVal < 1) ? 4 : speedVal;
 
   let imageInput = document.getElementById("editHomeImage");
   if (imageInput && imageInput.files.length > 0) {
