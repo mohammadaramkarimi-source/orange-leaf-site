@@ -25,15 +25,26 @@ nav a{
 nav a:hover{background:white;color:#063970;}
 
 #home{
+  position:relative;
   min-height:400px;
-  background:linear-gradient(rgba(0,50,100,.7),rgba(0,50,100,.7)),
+  overflow:hidden;
+  background:#063970
   url("https://images.unsplash.com/photo-1509391366360-2e959784a276");
   background-size:cover;background-position:center;
   display:flex;flex-direction:column;justify-content:center;align-items:center;
   text-align:center;color:white;padding:30px;
 }
-#home h1{font-size:38px;margin-bottom:20px;}
-#home p{font-size:18px;max-width:700px;}
+.home-slides{position:absolute;inset:0;z-index:0;}
+.home-slide{
+  position:absolute;inset:0;
+  background-size:cover;background-position:center;
+  opacity:0;transition:opacity 1.2s ease-in-out;
+}
+.home-slide.active{opacity:1;}
+.home-overlay{position:absolute;inset:0;background:rgba(0,40,85,.28);z-index:1;}
+#homeContent{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;}
+#home h1{font-size:38px;margin-bottom:20px;text-shadow:0 2px 10px rgba(0,0,0,.55);}
+#home p{font-size:18px;max-width:700px;text-shadow:0 1px 6px rgba(0,0,0,.55);}
 
 button{background:#ff9800;color:white;border:none;padding:12px 30px;border-radius:10px;margin-top:15px;font-size:16px;cursor:pointer;}
 button:hover{opacity:0.9;}
@@ -149,9 +160,13 @@ footer{background:#111;color:white;padding:25px;text-align:center;}
 <div id="mainSite">
 
 <section id="home">
-  <h1 id="homeTitle">مشاوره و طراحی نیروگاه خورشیدی</h1>
-  <p id="homeSubtitle">ارائه خدمات طراحی فنی، طرح توجیهی و مطالعات اتصال به شبکه</p>
-  <button onclick="goToPage('login')">ثبت درخواست پروژه</button>
+  <div class="home-slides" id="homeSlides"></div>
+  <div class="home-overlay"></div>
+  <div id="homeContent">
+    <h1 id="homeTitle">مشاوره و طراحی نیروگاه خورشیدی</h1>
+    <p id="homeSubtitle">ارائه خدمات طراحی فنی، طرح توجیهی و مطالعات اتصال به شبکه</p>
+    <button id="homeCtaButton" onclick="goToPage('login')">ثبت درخواست پروژه</button>
+  </div>
 </section>
 
 <section id="services">
@@ -397,13 +412,19 @@ footer{background:#111;color:white;padding:25px;text-align:center;}
     <h4>بخش معرفی (Home)</h4>
     <input id="editHomeTitle" placeholder="عنوان اصلی">
     <input id="editHomeSubtitle" placeholder="زیرعنوان">
-    <label style="display:block;text-align:right;font-size:14px;margin:10px 0 4px;">تصویر پس‌زمینه صفحه اصلی</label>
-    <img id="homeImagePreview" src="" style="display:none;width:100%;max-height:150px;object-fit:cover;border-radius:8px;margin-bottom:8px;">
-    <input type="file" id="editHomeImage" accept="image/*">
+
+    <label style="display:block;text-align:right;font-size:14px;margin:10px 0 4px;">تصاویر اسلایدی پس‌زمینه صفحه اصلی</label>
+    <div id="homeImagesList"></div>
+    <input type="file" id="editHomeImage" accept="image/*" multiple>
+    <p class="hint" style="text-align:right;">می‌توانید چند عکس را همزمان انتخاب کنید تا به‌صورت اسلایدی نمایش داده شوند.</p>
     <div class="row-buttons" style="justify-content:flex-start;">
-      <button onclick="saveHomeContent()">ذخیره بخش معرفی</button>
-      <button onclick="resetHomeImage()" style="background:#555;">بازگشت به تصویر پیش‌فرض</button>
+      <button onclick="saveHomeContent()">افزودن / ذخیره عکس‌ها</button>
+      <button onclick="resetHomeImage()" style="background:#555;">حذف همه و بازگشت به تصویر پیش‌فرض</button>
     </div>
+
+    <label style="display:block;text-align:right;font-size:14px;margin:14px 0 4px;">فاصله دکمه «ثبت درخواست پروژه» از بالا (پیکسل)</label>
+    <input id="editHomeButtonMarginTop" type="number" min="0" max="400" placeholder="مثال: 15">
+    <button onclick="saveHomeButtonPosition()">ذخیره موقعیت دکمه</button>
 
     <h4 style="margin-top:20px;">بخش خدمات ما</h4>
     <input id="editServicesHeading" placeholder="عنوان بخش خدمات">
@@ -2431,6 +2452,8 @@ let defaultSiteContent = {
   },
   homeTitle: "مشاوره و طراحی نیروگاه خورشیدی",
   homeSubtitle: "ارائه خدمات طراحی فنی، طرح توجیهی و مطالعات اتصال به شبکه",
+  homeImages: [],
+  homeButtonMarginTop: 15,
   servicesHeading: "خدمات ما",
   svcTitle0: "طراحی فنی نیروگاه",
   svcDesc0: "طراحی تجهیزات و نقشه‌های اجرایی",
@@ -2463,6 +2486,10 @@ function getSiteContent() {
   Object.keys(defaultSiteContent).forEach(function (key) {
     if (content[key] === undefined) content[key] = defaultSiteContent[key];
   });
+  // سازگاری با نسخه قدیمی که فقط یک عکس پس‌زمینه (homeImage) داشت
+  if (content.homeImage && (!content.homeImages || content.homeImages.length === 0)) {
+    content.homeImages = [content.homeImage];
+  }
   return content;
 }
 
@@ -2498,16 +2525,52 @@ function saveTeamMembers(members) {
   remoteStorage.setItem("teamMembers", JSON.stringify(members));
 }
 
+let homeSlideInterval = null;
+let homeSlideIndex = 0;
+
+function renderHomeSlideshow(content) {
+  let container = document.getElementById("homeSlides");
+  if (!container) return;
+
+  let images = (content.homeImages || []).filter(Boolean);
+
+  if (homeSlideInterval) {
+    clearInterval(homeSlideInterval);
+    homeSlideInterval = null;
+  }
+
+  if (images.length === 0) {
+    container.innerHTML = "";
+    return;
+  }
+
+  container.innerHTML = images.map(function (ref, i) {
+    return '<div class="home-slide' + (i === 0 ? " active" : "") + '" style="background-image:url(\'' + resolveMediaRef(ref) + '\')"></div>';
+  }).join("");
+
+  homeSlideIndex = 0;
+
+  if (images.length > 1) {
+    homeSlideInterval = setInterval(function () {
+      let slides = container.querySelectorAll(".home-slide");
+      if (slides.length < 2) return;
+      slides[homeSlideIndex].classList.remove("active");
+      homeSlideIndex = (homeSlideIndex + 1) % slides.length;
+      slides[homeSlideIndex].classList.add("active");
+    }, 4000);
+  }
+}
+
 function renderSiteContent() {
   let content = getSiteContent();
   document.getElementById("homeTitle").textContent = content.homeTitle;
   document.getElementById("homeSubtitle").textContent = content.homeSubtitle;
 
-  let homeEl = document.getElementById("home");
-  if (content.homeImage) {
-    homeEl.style.backgroundImage = 'linear-gradient(rgba(0,50,100,.7),rgba(0,50,100,.7)), url("' + resolveMediaRef(content.homeImage) + '")';
-  } else {
-    homeEl.style.backgroundImage = "";
+  renderHomeSlideshow(content);
+
+  let homeButton = document.getElementById("homeCtaButton");
+  if (homeButton) {
+    homeButton.style.marginTop = (content.homeButtonMarginTop !== undefined ? content.homeButtonMarginTop : 15) + "px";
   }
 
   document.getElementById("servicesHeading").textContent = content.servicesHeading;
@@ -2853,14 +2916,8 @@ function showSiteContentAdmin() {
   let content = getSiteContent();
   document.getElementById("editHomeTitle").value = content.homeTitle;
   document.getElementById("editHomeSubtitle").value = content.homeSubtitle;
-
-  let preview = document.getElementById("homeImagePreview");
-  if (content.homeImage) {
-    preview.src = resolveMediaRef(content.homeImage);
-    preview.style.display = "block";
-  } else {
-    preview.style.display = "none";
-  }
+  document.getElementById("editHomeButtonMarginTop").value = content.homeButtonMarginTop !== undefined ? content.homeButtonMarginTop : 15;
+  renderHomeImagesAdmin(content);
 
   let logoPreview = document.getElementById("logoImagePreview");
   if (logoPreview) {
@@ -3035,6 +3092,52 @@ function saveDashboardSettings() {
   showSiteMessage("تنظیمات بخش‌های پنل کاربری ذخیره شد");
 }
 
+function renderHomeImagesAdmin(content) {
+  let box = document.getElementById("homeImagesList");
+  if (!box) return;
+  let images = content.homeImages || [];
+
+  if (images.length === 0) {
+    box.innerHTML = '<p class="hint">هنوز عکسی اضافه نشده است (تصویر پیش‌فرض نمایش داده می‌شود).</p>';
+    return;
+  }
+
+  box.innerHTML = images.map(function (ref, i) {
+    return '<div style="display:flex;align-items:center;gap:8px;border:1px solid #eee;border-radius:8px;padding:8px;margin:6px 0;">' +
+      '<img src="' + resolveMediaRef(ref) + '" style="width:70px;height:50px;object-fit:cover;border-radius:6px;">' +
+      '<span style="flex:1;font-size:13px;">عکس ' + (i + 1) + '</span>' +
+      '<button type="button" onclick="moveHomeImage(' + i + ',-1)" style="padding:6px 10px;font-size:13px;">▲</button>' +
+      '<button type="button" onclick="moveHomeImage(' + i + ',1)" style="padding:6px 10px;font-size:13px;">▼</button>' +
+      '<button type="button" onclick="removeHomeImage(' + i + ')" style="padding:6px 10px;font-size:13px;background:#c0392b;">حذف</button>' +
+      '</div>';
+  }).join("");
+}
+
+function moveHomeImage(index, direction) {
+  let content = getSiteContent();
+  let images = content.homeImages || [];
+  let target = index + direction;
+  if (target < 0 || target >= images.length) return;
+  let tmp = images[index];
+  images[index] = images[target];
+  images[target] = tmp;
+  content.homeImages = images;
+  saveSiteContent(content);
+  renderSiteContent();
+  showSiteContentAdmin();
+}
+
+function removeHomeImage(index) {
+  let content = getSiteContent();
+  let images = content.homeImages || [];
+  images.splice(index, 1);
+  content.homeImages = images;
+  saveSiteContent(content);
+  renderSiteContent();
+  showSiteContentAdmin();
+  showSiteMessage("عکس حذف شد");
+}
+
 async function saveHomeContent() {
   let content = getSiteContent();
   content.homeTitle = document.getElementById("editHomeTitle").value.trim();
@@ -3042,12 +3145,16 @@ async function saveHomeContent() {
 
   let imageInput = document.getElementById("editHomeImage");
   if (imageInput && imageInput.files.length > 0) {
+    let images = content.homeImages || [];
     try {
-      content.homeImage = storeMediaAndGetRef(await fileToBase64(imageInput.files[0]));
+      for (let i = 0; i < imageInput.files.length; i++) {
+        images.push(storeMediaAndGetRef(await fileToBase64(imageInput.files[i])));
+      }
     } catch (e) {
       showSiteMessage("خطا در بارگذاری تصویر - دوباره تلاش کنید", true);
       return;
     }
+    content.homeImages = images;
   }
 
   try {
@@ -3057,18 +3164,29 @@ async function saveHomeContent() {
     return;
   }
 
+  if (imageInput) imageInput.value = "";
   renderSiteContent();
   showSiteContentAdmin();
   showSiteMessage("بخش معرفی ذخیره شد");
 }
 
+function saveHomeButtonPosition() {
+  let content = getSiteContent();
+  let val = parseInt(document.getElementById("editHomeButtonMarginTop").value, 10);
+  content.homeButtonMarginTop = isNaN(val) ? 15 : val;
+  saveSiteContent(content);
+  renderSiteContent();
+  showSiteMessage("موقعیت دکمه ذخیره شد");
+}
+
 function resetHomeImage() {
   let content = getSiteContent();
   delete content.homeImage;
+  content.homeImages = [];
   saveSiteContent(content);
   renderSiteContent();
   showSiteContentAdmin();
-  showSiteMessage("تصویر پس‌زمینه به حالت پیش‌فرض بازگشت");
+  showSiteMessage("تصاویر پس‌زمینه حذف شدند و به حالت پیش‌فرض بازگشت");
 }
 
 function swapServices(i, j) {
