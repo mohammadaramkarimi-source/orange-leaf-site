@@ -260,6 +260,19 @@ footer{background:#111;color:white;padding:25px;text-align:center;}
   </div>
 </div>
 
+<!-- ============================ صفحه جزئیات یک بخش (قابل فعال/غیرفعال کردن) ============================ -->
+<div id="sectionDetailPage" class="full-page" style="display:none;">
+  <div class="page-top">
+    <h2 id="sectionDetailPageTitle">جزئیات</h2>
+    <button onclick="showView('main')" style="background:#555;">بازگشت به صفحه اصلی</button>
+  </div>
+
+  <div class="user-box" style="max-width:600px;text-align:center;">
+    <img id="sectionDetailPageImage" src="" style="display:none;max-width:100%;border-radius:10px;margin:15px 0;">
+    <p id="sectionDetailPageText" style="text-align:right;"></p>
+  </div>
+</div>
+
 <!-- ============================ صفحه پنل کاربری ============================ -->
 <div id="userDashboard" class="full-page" style="display:none;">
   <div class="page-top">
@@ -360,6 +373,10 @@ footer{background:#111;color:white;padding:25px;text-align:center;}
 
     <h4>ترتیب بخش‌های صفحه اصلی</h4>
     <div id="sectionOrderAdminList"></div>
+
+    <h4 style="margin-top:20px;">صفحه جزئیات با کلیک (اختیاری)</h4>
+    <p class="hint">اگر فعال کنید، با کلیک روی آن بخش یک صفحه جدید با عکس و متن دلخواه شما باز می‌شود</p>
+    <div id="sectionDetailAdminList"></div>
 
     <h4>لوگوی سایت</h4>
     <img id="logoImagePreview" src="" style="display:none;max-height:80px;margin-bottom:8px;">
@@ -734,7 +751,7 @@ function formatDocsForInput(docs) {
 // سوییچ صفحه‌ها
 // ============================================
 function showView(view) {
-  let ids = { main: "mainSite", user: "userDashboard", admin: "adminPanelPage", userDetail: "userDetailPage", login: "loginPage", support: "supportPage", teamMember: "teamMemberPage" };
+  let ids = { main: "mainSite", user: "userDashboard", admin: "adminPanelPage", userDetail: "userDetailPage", login: "loginPage", support: "supportPage", teamMember: "teamMemberPage", sectionDetail: "sectionDetailPage" };
   Object.keys(ids).forEach(function (key) {
     document.getElementById(ids[key]).style.display = (key === view) ? "block" : "none";
   });
@@ -2406,6 +2423,12 @@ let defaultSiteContent = {
   logoSize: 42,
   customSections: [],
   sectionOrder: ["home", "services", "team", "about", "custom"],
+  sectionDetailPages: {
+    home: { enabled: false, image: "", text: "" },
+    services: { enabled: false, image: "", text: "" },
+    team: { enabled: false, image: "", text: "" },
+    about: { enabled: false, image: "", text: "" }
+  },
   homeTitle: "مشاوره و طراحی نیروگاه خورشیدی",
   homeSubtitle: "ارائه خدمات طراحی فنی، طرح توجیهی و مطالعات اتصال به شبکه",
   servicesHeading: "خدمات ما",
@@ -2514,6 +2537,58 @@ function renderSiteContent() {
 
   renderCustomSections();
   applySectionOrder();
+  applySectionClickability(content);
+}
+
+// ============================================
+// صفحه‌ی جزئیات قابل فعال/غیرفعال برای هر بخش
+// ============================================
+function applySectionClickability(content) {
+  ["home", "services", "team", "about"].forEach(function (id) {
+    let el = document.getElementById(id);
+    if (!el) return;
+    let detail = (content.sectionDetailPages && content.sectionDetailPages[id]) || {};
+    if (detail.enabled) {
+      el.style.cursor = "pointer";
+      el.onclick = function (e) {
+        let interactive = e.target.closest("button, a, input, textarea, [onclick]");
+        if (interactive && interactive !== el) return;
+        openSectionDetailPage("main", id);
+      };
+    } else {
+      el.style.cursor = "";
+      el.onclick = null;
+    }
+  });
+}
+
+function openSectionDetailPage(kind, sectionId) {
+  let content = getSiteContent();
+  let detail = {};
+  let title = "";
+
+  if (kind === "main") {
+    detail = (content.sectionDetailPages && content.sectionDetailPages[sectionId]) || {};
+    title = sectionOrderLabels[sectionId] || sectionId;
+  } else {
+    let customSections = content.customSections || [];
+    let section = customSections.filter(function (s) { return String(s.id) === String(sectionId); })[0];
+    detail = (section && section.detailPage) || {};
+    title = (section && section.title) || "";
+  }
+
+  document.getElementById("sectionDetailPageTitle").textContent = title;
+  document.getElementById("sectionDetailPageText").textContent = detail.text || "";
+
+  let img = document.getElementById("sectionDetailPageImage");
+  if (detail.image) {
+    img.src = resolveMediaRef(detail.image);
+    img.style.display = "block";
+  } else {
+    img.style.display = "none";
+  }
+
+  showView("sectionDetail");
 }
 
 // ============================================
@@ -2570,6 +2645,52 @@ function renderSectionOrderAdmin() {
   }).join("");
 }
 
+function renderSectionDetailAdmin() {
+  let content = getSiteContent();
+  let box = document.getElementById("sectionDetailAdminList");
+  if (!box) return;
+  let ids = ["home", "services", "team", "about"];
+  box.innerHTML = ids.map(function (id) {
+    let detail = (content.sectionDetailPages && content.sectionDetailPages[id]) || {};
+    let label = sectionOrderLabels[id] || id;
+    let imgSrc = detail.image ? resolveMediaRef(detail.image) : "";
+    return '<div class="record">' +
+      '<label style="display:block;margin-bottom:8px;"><input type="checkbox" id="sectionDetailEnabled_' + id + '" ' + (detail.enabled ? "checked" : "") + '> فعال بودن صفحه جزئیات برای «' + label + '»</label>' +
+      '<img id="sectionDetailPreview_' + id + '" src="' + imgSrc + '" style="display:' + (imgSrc ? "block" : "none") + ';max-width:100%;max-height:120px;border-radius:8px;margin:8px 0;">' +
+      '<input type="file" id="sectionDetailImage_' + id + '" accept="image/*,image/gif">' +
+      '<textarea id="sectionDetailText_' + id + '" placeholder="متن این بخش" rows="3">' + (detail.text || "") + '</textarea>' +
+      '<button onclick="saveSectionDetailPage(\'' + id + '\')">ذخیره</button>' +
+      '<p id="sectionDetailMsg_' + id + '"></p>' +
+      '</div>';
+  }).join("");
+}
+
+async function saveSectionDetailPage(sectionId) {
+  let content = getSiteContent();
+  if (!content.sectionDetailPages) content.sectionDetailPages = {};
+  let existing = content.sectionDetailPages[sectionId] || {};
+  let enabled = document.getElementById("sectionDetailEnabled_" + sectionId).checked;
+  let text = document.getElementById("sectionDetailText_" + sectionId).value.trim();
+  let fileInput = document.getElementById("sectionDetailImage_" + sectionId);
+  let image = existing.image || "";
+  let msg = document.getElementById("sectionDetailMsg_" + sectionId);
+
+  if (fileInput && fileInput.files.length > 0) {
+    try {
+      image = storeMediaAndGetRef(await fileToBase64(fileInput.files[0]));
+    } catch (e) {
+      if (msg) { msg.innerHTML = "خطا در بارگذاری عکس - دوباره تلاش کنید"; msg.className = "error-msg"; }
+      return;
+    }
+  }
+
+  content.sectionDetailPages[sectionId] = { enabled: enabled, image: image, text: text };
+  saveSiteContent(content);
+  renderSiteContent();
+  renderSectionDetailAdmin();
+  if (msg) { msg.innerHTML = "ذخیره شد"; msg.className = "success-msg"; }
+}
+
 function moveSection(index, direction) {
   let content = getSiteContent();
   let order = normalizeSectionOrder(content.sectionOrder);
@@ -2603,7 +2724,9 @@ function renderCustomSections() {
     } else {
       mediaHtml = '<p class="custom-text">' + (s.content || "").replace(/</g, "&lt;") + '</p>';
     }
-    return '<section class="custom-section">' +
+    let clickable = s.detailPage && s.detailPage.enabled;
+    let clickAttr = clickable ? ' onclick="openSectionDetailPage(\'custom\',\'' + s.id + '\')" style="cursor:pointer;"' : '';
+    return '<section class="custom-section"' + clickAttr + '>' +
       (s.title ? '<h2>' + s.title.replace(/</g, "&lt;") + '</h2>' : '') +
       mediaHtml +
       '</section>';
@@ -2753,6 +2876,7 @@ function showSiteContentAdmin() {
   document.getElementById("editHeaderTextSize").value = content.headerTextSize || 22;
   renderCustomSectionsAdmin();
   renderSectionOrderAdmin();
+  renderSectionDetailAdmin();
 
   document.getElementById("editServicesHeading").value = content.servicesHeading;
   document.getElementById("editSvcTitle0").value = content.svcTitle0;
@@ -3124,6 +3248,20 @@ function showCustomSectionMessage(text, isError) {
 function renderCustomSectionsAdmin() {
   let content = getSiteContent();
   let sections = content.customSections || [];
+
+  // اطمینان از اینکه هر بخش سفارشی یک شناسه‌ی ثابت دارد (سازگاری با داده‌های قدیمی‌تر)
+  let idsAdded = false;
+  sections.forEach(function (s) {
+    if (!s.id) {
+      s.id = Date.now() + "_" + Math.floor(Math.random() * 100000);
+      idsAdded = true;
+    }
+  });
+  if (idsAdded) {
+    content.customSections = sections;
+    saveSiteContent(content);
+  }
+
   let box = document.getElementById("customSectionsAdminList");
   if (!box) return;
 
@@ -3136,6 +3274,8 @@ function renderCustomSectionsAdmin() {
     } else if (s.type === "video") {
       mediaPreview = '<video src="' + resolveMediaRef(s.content) + '" style="max-width:100%;max-height:150px;border-radius:8px;display:block;margin-bottom:8px;" controls></video>';
     }
+    let detail = s.detailPage || {};
+    let detailImgSrc = detail.image ? resolveMediaRef(detail.image) : "";
     return '<div class="custom-section-admin-box">' +
       '<label style="display:block;text-align:right;font-size:13px;margin:4px 0;">نوع بخش: ' + (typeLabels[s.type] || s.type) + '</label>' +
       mediaPreview +
@@ -3148,8 +3288,45 @@ function renderCustomSectionsAdmin() {
       '<button onclick="updateCustomSection(' + i + ')">ذخیره</button>' +
       '<button onclick="deleteCustomSection(' + i + ')" style="background:#c0392b;">حذف بخش</button>' +
       '</div>' +
+      '<div style="margin-top:14px;padding-top:10px;border-top:1px solid #ddd;">' +
+      '<label style="display:block;margin-bottom:8px;"><input type="checkbox" id="customSectionDetailEnabled_' + i + '" ' + (detail.enabled ? "checked" : "") + '> فعال بودن صفحه جزئیات با کلیک روی این بخش</label>' +
+      '<img id="customSectionDetailPreview_' + i + '" src="' + detailImgSrc + '" style="display:' + (detailImgSrc ? "block" : "none") + ';max-width:100%;max-height:120px;border-radius:8px;margin:8px 0;">' +
+      '<input type="file" id="customSectionDetailImage_' + i + '" accept="image/*,image/gif">' +
+      '<textarea id="customSectionDetailText_' + i + '" placeholder="متن صفحه جزئیات" rows="3">' + (detail.text || "") + '</textarea>' +
+      '<button onclick="saveCustomSectionDetail(' + i + ')">ذخیره صفحه جزئیات</button>' +
+      '<p id="customSectionDetailMsg_' + i + '"></p>' +
+      '</div>' +
       '</div>';
   }).join("") || '<p class="hint">هنوز بخش سفارشی‌ای اضافه نشده است.</p>';
+}
+
+async function saveCustomSectionDetail(index) {
+  let content = getSiteContent();
+  let sections = content.customSections || [];
+  if (!sections[index]) return;
+
+  let existing = sections[index].detailPage || {};
+  let enabled = document.getElementById("customSectionDetailEnabled_" + index).checked;
+  let text = document.getElementById("customSectionDetailText_" + index).value.trim();
+  let fileInput = document.getElementById("customSectionDetailImage_" + index);
+  let image = existing.image || "";
+  let msg = document.getElementById("customSectionDetailMsg_" + index);
+
+  if (fileInput && fileInput.files.length > 0) {
+    try {
+      image = storeMediaAndGetRef(await fileToBase64(fileInput.files[0]));
+    } catch (e) {
+      if (msg) { msg.innerHTML = "خطا در بارگذاری عکس - دوباره تلاش کنید"; msg.className = "error-msg"; }
+      return;
+    }
+  }
+
+  sections[index].detailPage = { enabled: enabled, image: image, text: text };
+  content.customSections = sections;
+  saveSiteContent(content);
+  renderSiteContent();
+  renderCustomSectionsAdmin();
+  if (msg) { msg.innerHTML = "ذخیره شد"; msg.className = "success-msg"; }
 }
 
 async function addCustomSection() {
@@ -3180,7 +3357,8 @@ async function addCustomSection() {
 
   let content = getSiteContent();
   let sections = content.customSections || [];
-  sections.push({ title: title, type: type, content: sectionContent });
+  let newId = Date.now() + "_" + Math.floor(Math.random() * 100000);
+  sections.push({ id: newId, title: title, type: type, content: sectionContent, detailPage: { enabled: false, image: "", text: "" } });
   content.customSections = sections;
 
   try {
